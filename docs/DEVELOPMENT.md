@@ -39,7 +39,8 @@ Copy `.env.example` only when the application supports local dotenv loading. Nev
 
 - Run `/memory` to confirm loaded instructions.
 - Run `/hooks` to inspect configured hooks.
-- Run `/doctor` when configuration is not loading.
+- Run `claude doctor` from the shell for a read-only installation and configuration check. Reserve
+  interactive `/doctor` for cases that may need guided repair, and review its requested commands.
 - Use `/plan-change` before complex work.
 - Use `/quality-gate` before completion.
 - Use `/prepare-pr` to produce a reviewable PR description.
