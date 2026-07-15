@@ -1,6 +1,6 @@
 ---
 paths:
-  - "src/**/*.py"
+  - "services/*/src/**/*.py"
 ---
 
 # Clean Architecture rules

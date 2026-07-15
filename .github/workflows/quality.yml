@@ -3,7 +3,7 @@ name: quality
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [master]
 
 permissions:
   contents: read
@@ -30,7 +30,7 @@ jobs:
         run: uv lock --check
 
       - name: Install dependencies
-        run: uv sync --frozen --all-groups
+        run: uv sync --frozen --all-groups --all-packages
 
       - name: Ruff lint
         run: uv run ruff check .
@@ -45,13 +45,13 @@ jobs:
         run: uv run python scripts/validate_mcp_config.py
 
       - name: Mypy
-        run: uv run mypy src tests
+        run: uv run mypy packages tests
 
       - name: Tests
         run: uv run pytest --cov-report=xml
 
       - name: Bandit
-        run: uv run bandit -c pyproject.toml -r src
+        run: uv run bandit -c pyproject.toml -r packages
 
       - name: Dependency audit
         run: uv run pip-audit

@@ -1,6 +1,10 @@
 # syntax=docker/dockerfile:1
 #
-# Build from the committed lock file and keep uv and build tools out of the runtime image.
+# Workspace validation image for Milestone 1 (workspace foundation). The root pyproject.toml is a
+# virtual uv workspace coordinator with no application code, so there is no application runtime
+# entrypoint yet. This image only proves the uv workspace builds and both packages import cleanly;
+# it is NOT an application runtime image. A future milestone replaces the CMD below with a real
+# service entrypoint under services/.
 
 FROM python:3.13-slim AS builder
 
@@ -12,16 +16,10 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 WORKDIR /app
 
-# Cache dependencies independently from source changes.
-RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --frozen --no-install-project --no-dev
-
 COPY . /app
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
+    uv sync --frozen --all-packages --no-dev
 
 FROM python:3.13-slim
 
@@ -37,7 +35,5 @@ ENV PATH="/app/.venv/bin:$PATH" \
 
 USER app
 
-# Replace this framework-neutral placeholder with the project's entrypoint, for example:
-#   CMD ["uvicorn", "multi_agent_credit_desk.entrypoints.http:app", "--host", "0.0.0.0", "--port", "8000"]
-#   CMD ["python", "-m", "multi_agent_credit_desk"]
-CMD ["python", "-c", "import multi_agent_credit_desk; print(multi_agent_credit_desk.__doc__)"]
+# Workspace integrity check only - not an application runtime command.
+CMD ["python", "-c", "import credit_core, credit_desk_contracts; print('workspace import check ok:', credit_core.__name__, credit_desk_contracts.__name__)"]

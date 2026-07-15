@@ -16,9 +16,9 @@ Inspect the diff, then run the relevant checks, normally:
 3. `uv run ruff format --check .`
 4. `uv run python scripts/validate_architecture.py`
 5. `uv run python scripts/validate_mcp_config.py`
-6. `uv run mypy src tests`
+6. `uv run mypy packages tests`
 7. `uv run pytest`
-8. `uv run bandit -c pyproject.toml -r src`
+8. `uv run bandit -c pyproject.toml -r packages`
 9. `uv run pip-audit`
 
 Distinguish failures introduced by the diff from pre-existing failures. Also inspect for missing tests, sensitive logging, unsafe retries, and undocumented contract changes.

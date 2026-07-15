@@ -3,26 +3,33 @@
 ## Project
 
 - Runtime: Python 3.13
-- Package: `multi_agent_credit_desk`
 - Dependency manager: uv
-- Layout: `src/multi_agent_credit_desk`
+- Layout: uv workspace. Root `pyproject.toml` is a **virtual coordinator**
+  (`tool.uv.package = false`) with no application code and no source tree of its own. Workspace
+  packages: `packages/contracts` (import `credit_desk_contracts`) and `packages/credit-core`
+  (import `credit_core`, deterministic, zero third-party/dynamic imports — enforced by
+  `scripts/validate_architecture.py`). Future application entrypoints belong under `services/`
+  (not yet created), not in a root application package.
 - Tests: pytest
-- Architecture: Clean Architecture
-- Container: multi-stage `Dockerfile`; replace its placeholder `CMD` when an entrypoint exists
+- Architecture: Clean Architecture (applies to `services/*` packages once they exist; see
+  `docs/ARCHITECTURE.md`)
+- Container: `Dockerfile` currently builds a workspace-validation image only (imports `credit_core`
+  and `credit_desk_contracts`); it is not an application runtime image. Replace its `CMD` with a
+  real `services/*` entrypoint when one exists.
 
 Keep these facts and the commands below current as the project evolves.
 
 ## Quality gate
 
 ```bash
-uv sync --frozen
+uv sync --frozen --all-packages
 uv run ruff check .
 uv run ruff format --check .
 uv run python scripts/validate_architecture.py
 uv run python scripts/validate_mcp_config.py
-uv run mypy src tests
+uv run mypy packages tests
 uv run pytest
-uv run bandit -c pyproject.toml -r src
+uv run bandit -c pyproject.toml -r packages
 uv run pip-audit
 ```
 
