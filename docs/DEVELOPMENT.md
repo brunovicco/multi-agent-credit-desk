@@ -3,17 +3,21 @@
 ## Setup
 
 ```bash
-uv sync --frozen
+uv sync --frozen --all-packages
 ```
+
+`--all-packages` is required: the root of this workspace is a virtual coordinator
+(`tool.uv.package = false`), so a plain `uv sync` installs nothing from `packages/*` unless told to
+sync the whole workspace.
 
 ## Run checks
 
 ```bash
 uv run ruff check .
 uv run ruff format --check .
-uv run mypy src tests
+uv run mypy packages tests
 uv run pytest
-uv run bandit -c pyproject.toml -r src
+uv run bandit -c pyproject.toml -r packages
 uv run pip-audit
 ```
 
@@ -24,12 +28,11 @@ docker build -t multi-agent-credit-desk .
 docker run --rm multi-agent-credit-desk
 ```
 
-`Dockerfile` is a multi-stage, uv-based build: a `builder` stage installs the locked
-dependencies and builds the package, then only the resulting virtualenv and source are copied
-into a slim, non-root runtime image. The shipped `CMD` is a placeholder — this harness is
-framework-agnostic and does not assume an ASGI app, CLI, or worker loop. Replace it with the
-project's real entrypoint. Adjust `.dockerignore` if new top-level files or directories need to
-be excluded from the build context.
+`Dockerfile` is a multi-stage, uv-based build. As of Milestone 1 (workspace foundation) it produces
+a **workspace-validation image**, not an application runtime image: the `builder` stage runs
+`uv sync --frozen --all-packages --no-dev`, and the runtime stage's `CMD` only imports `credit_core`
+and `credit_desk_contracts` to prove the workspace builds and installs cleanly. Replace the `CMD`
+with a real `services/*` entrypoint once one exists.
 
 ## Local configuration
 

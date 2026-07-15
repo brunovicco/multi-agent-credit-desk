@@ -2,12 +2,40 @@
 
 ## Context
 
-Describe the business capability owned by this service and its upstream and downstream dependencies.
+Multi-agent platform that analyzes corporate credit applications for Brazilian legal entities
+(pessoas jurídicas, PJ) and produces an auditable credit decision with reproducible evidence. See
+`docs/architecture-blueprint.md` for the full narrative and `docs/adr/` for the canonical,
+individually recorded decisions.
+
+## Workspace
+
+As of Milestone 1 (workspace foundation), this repository is a uv workspace whose root is a
+**virtual coordinator** (`tool.uv.package = false` in `pyproject.toml`) — it holds no application
+code and is not itself installed. The workspace members are:
+
+| Package | Import name | Purpose |
+|---|---|---|
+| `packages/contracts` | `credit_desk_contracts` | Shared schemas, enums, and payload contracts. Scaffolded, empty. |
+| `packages/credit-core` | `credit_core` | Deterministic credit scoring and policy core. Scaffolded, empty. |
+
+`credit_core` may import only the standard library and itself; every third-party or other
+workspace import is rejected by default, and dynamic import mechanisms (`importlib`, `__import__`)
+are explicitly forbidden. This is enforced by `scripts/validate_architecture.py`, not just
+documented — see `.claude/rules/credit-core.md` and
+`docs/adr/0008-deterministic-core-without-llm.md`.
+
+Application entrypoints (agents, orchestrator) do not exist yet. Their future home is `services/`,
+not a root application package — this milestone deliberately does not create that directory.
 
 ## Layers
 
+The layered Clean Architecture pattern below is not instantiated by any code in this repository
+today. It is the required pattern for whichever `services/*` package is built first, and
+`scripts/validate_architecture.py` already discovers and enforces it under any `services/*/src/`
+root (see `.claude/rules/architecture.md`).
+
 ```text
-src/multi_agent_credit_desk/
+services/<name>/src/<name>/
 ├── domain/
 ├── application/
 ├── adapters/
@@ -47,7 +75,9 @@ domain      -> no outer layer
 - Time: UTC internally with timezone-aware values.
 - Money: `Decimal` wrapped in a domain Value Object.
 - Idempotency: required for externally visible side effects.
-- Packaging: containerized via the repo `Dockerfile` (multi-stage, uv-based); the runtime `CMD` is defined per project.
+- Packaging: the repo `Dockerfile` currently builds a workspace-validation image only (imports
+  `credit_core` and `credit_desk_contracts`) — it is not an application runtime image. A future
+  milestone replaces its `CMD` with a real `services/*` entrypoint.
 
 ## Diagrams
 

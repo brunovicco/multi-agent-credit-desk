@@ -1,20 +1,16 @@
 [project]
 name = "multi-agent-credit-desk"
 version = "0.1.0"
-description = "Python service generated from the Claude Code engineering harness"
+description = "Virtual uv workspace coordinator for the Multi-Agent Credit Desk. Holds no application code; see packages/contracts and packages/credit-core."
 readme = "README.md"
 requires-python = ">=3.13,<3.15"
-dependencies = [
-    "pydantic>=2.11",
-    "pydantic-settings>=2.8",
-    "structlog>=25.1",
-]
+dependencies = []
 
-[project.optional-dependencies]
-# Opt-in LLM tracing; see docs/LLM_OBSERVABILITY.md. Install with `uv sync --extra tracing`.
-tracing = [
-    "langfuse>=3.0",
-]
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/*"]
 
 [dependency-groups]
 dev = [
@@ -26,17 +22,16 @@ dev = [
     "ruff>=0.12",
 ]
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/multi_agent_credit_desk"]
-
 [tool.ruff]
 target-version = "py313"
 line-length = 100
-src = ["src", "tests"]
+src = [
+    "packages/contracts/src",
+    "packages/contracts/tests",
+    "packages/credit-core/src",
+    "packages/credit-core/tests",
+    "tests",
+]
 
 [tool.ruff.lint]
 select = [
@@ -60,6 +55,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["D", "S101", "ANN"]
+"packages/*/tests/**/*.py" = ["D", "S101", "ANN"]
 "scripts/**/*.py" = ["D"]
 
 [tool.ruff.lint.pydocstyle]
@@ -73,26 +69,19 @@ line-ending = "auto"
 [tool.mypy]
 python_version = "3.13"
 strict = true
-plugins = ["pydantic.mypy"]
 warn_unused_configs = true
 warn_unused_ignores = true
 show_error_codes = true
 pretty = true
-mypy_path = "src"
+mypy_path = "packages/contracts/src:packages/credit-core/src"
 
 [[tool.mypy.overrides]]
 module = ["tests.*"]
 disallow_untyped_decorators = false
 
-[[tool.mypy.overrides]]
-# langfuse is the optional "tracing" extra; not installed by default, so no
-# stubs are available unless a project opts in with `uv sync --extra tracing`.
-module = ["langfuse"]
-ignore_missing_imports = true
-
 [tool.pytest.ini_options]
-addopts = "--strict-config --strict-markers --cov=src/multi_agent_credit_desk --cov-report=term-missing"
-testpaths = ["tests"]
+addopts = "--strict-config --strict-markers --cov=packages/contracts/src/credit_desk_contracts --cov=packages/credit-core/src/credit_core --cov-report=term-missing"
+testpaths = ["tests", "packages/contracts/tests", "packages/credit-core/tests"]
 markers = [
     "integration: tests that require real infrastructure",
     "contract: tests that verify an interface contract",
@@ -101,7 +90,7 @@ markers = [
 
 [tool.coverage.run]
 branch = true
-source = ["src/multi_agent_credit_desk"]
+source = ["packages/contracts/src/credit_desk_contracts", "packages/credit-core/src/credit_core"]
 
 [tool.coverage.report]
 show_missing = true
@@ -109,5 +98,5 @@ skip_covered = true
 fail_under = 80
 
 [tool.bandit]
-exclude_dirs = ["tests"]
+exclude_dirs = ["tests", "packages/contracts/tests", "packages/credit-core/tests"]
 skips = []

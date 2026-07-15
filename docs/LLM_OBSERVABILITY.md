@@ -1,23 +1,25 @@
 # LLM observability policy
 
-This project can optionally trace LLM calls (latency, token usage, cost, and model name) to
-Langfuse through `src/multi_agent_credit_desk/adapters/tracing.py`. Structured application logging itself
-is always configured through `src/multi_agent_credit_desk/entrypoints/logging.py` and is not part of this
-policy - it never carries prompts or model responses, see `.claude/rules/security-privacy.md`.
+This document states the project's policy for tracing LLM calls to Langfuse and for structured
+application logging. As of Milestone 1 (workspace foundation), neither is implemented in this
+repository: the concrete tracing adapter and logging bootstrap described below are planned for
+`a2a-otel-kit`, a sibling library repository (see `docs/adr/0003-monorepo-with-extracted-libraries.md`
+and `docs/adr/0010-claude-code-harness-as-base.md`), not yet built. This policy is recorded now so
+that implementation follows it from the first line of code.
 
 ## Design principle
 
-Tracing is opt-in and defaults to metadata only. `build_llm_call_observer()` returns a no-op
-observer whenever the `tracing` optional dependency is not installed or Langfuse credentials are
-not set, so application code never needs to branch on whether tracing is enabled.
+Tracing is opt-in and defaults to metadata only. The future observer implementation must return a
+no-op observer whenever the tracing dependency is not installed or Langfuse credentials are not
+set, so application code never needs to branch on whether tracing is enabled.
 
 ## Default behavior
 
 - No prompt or completion content is sent to Langfuse unless `LANGFUSE_CAPTURE_CONTENT=true` is
   set explicitly.
-- Only metadata is recorded by default: call name, model, latency, token counts, and the bounded
-  allowlisted fields enforced by `sanitize_metadata()`. Unknown, nested, content-bearing, and
-  oversized metadata is discarded.
+- Only metadata is recorded by default: call name, model, latency, token counts, and a bounded
+  allowlisted set of fields. Unknown, nested, content-bearing, and oversized metadata must be
+  discarded.
 
 ## Enabling tracing
 
@@ -26,7 +28,8 @@ not set, so application code never needs to branch on whether tracing is enabled
 2. Choose a Langfuse deployment: cloud (`https://cloud.langfuse.com` EU,
    `https://us.cloud.langfuse.com` US, `https://jp.cloud.langfuse.com` Japan,
    or the HIPAA-eligible region) or self-hosted.
-3. `uv sync --extra tracing` to install the `langfuse` package.
+3. Install the tracing dependency once `a2a-otel-kit` (or an equivalent local implementation) is
+   consumed by this workspace.
 4. Set `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, and `LANGFUSE_BASE_URL` from a secret manager
    or environment injection - never commit real values; `.env.example` documents the variable
    names only.
@@ -43,7 +46,7 @@ not set, so application code never needs to branch on whether tracing is enabled
 - Access control for who can read traces in the Langfuse project.
 - Non-production data used for any test or staging traces.
 - Confirmation that no MCP tool output, secrets, or credentials can reach `prompt`/`completion`
-  fields. The tracing adapter allowlists metadata, but when content capture is enabled the caller
+  fields. The tracing adapter must allowlist metadata; when content capture is enabled the caller
   remains responsible for redacting the explicit `prompt` and `completion` values.
 
 ## Configuration reference
@@ -57,6 +60,5 @@ not set, so application code never needs to branch on whether tracing is enabled
 
 ## Uninstrumented by default
 
-Leaving all four variables unset keeps the project fully untraced; `build_llm_call_observer()`
-returns `NullLlmCallObserver`, which discards every call outcome. This matches the harness's MCP
-governance model: nothing external is connected until a project deliberately opts in.
+Leaving all four variables unset must keep the project fully untraced. This matches the harness's
+MCP governance model: nothing external is connected until a project deliberately opts in.

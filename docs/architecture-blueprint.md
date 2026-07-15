@@ -1,6 +1,6 @@
 # Mesa de Crédito Multi-Agente — Blueprint de Arquitetura
 
-**Versão:** 0.2 · **Data:** 2026-07-15 · **Autor:** Vicco (CFV Tech / Vicco Labs)
+**Versão:** 0.2 · **Data:** 2026-07-15 · **Autor:** Vicco
 **Status:** Aprovado para fase de scaffold (sem implementação de agentes)
 **Mudanças na 0.2:** ADR-001 revisado (monorepo + libs extraídas), ADR-007 ajustado
 (transparência do mock Open Finance), ADR-008 novo (harness como base), Python 3.13.
@@ -23,8 +23,21 @@ O projeto demonstra:
 
 ## 1. ADRs
 
-Formato curto: Contexto → Decisão → Consequências. Cada ADR vira um arquivo em
-`docs/adr/` no repositório.
+Formato curto: Contexto → Decisão → Consequências. Cada ADR abaixo foi extraído para um arquivo
+canônico em inglês em `docs/adr/`; este documento permanece como fonte histórica em português, não
+como registro canônico. As seções abaixo estão preservadas para contexto narrativo.
+
+| ADR do blueprint | Arquivo canônico |
+|---|---|
+| ADR-000 | [`docs/adr/0002-domain-credit-desk-vs-ai-change-guardian.md`](adr/0002-domain-credit-desk-vs-ai-change-guardian.md) |
+| ADR-001 | [`docs/adr/0003-monorepo-with-extracted-libraries.md`](adr/0003-monorepo-with-extracted-libraries.md) |
+| ADR-002 | [`docs/adr/0004-three-separated-routing-layers.md`](adr/0004-three-separated-routing-layers.md) |
+| ADR-003 | [`docs/adr/0005-policy-based-deterministic-router-mvp.md`](adr/0005-policy-based-deterministic-router-mvp.md) |
+| ADR-004 | [`docs/adr/0006-observability-otel-fanout-datadog-langfuse.md`](adr/0006-observability-otel-fanout-datadog-langfuse.md) |
+| ADR-005 | [`docs/adr/0007-telemetry-without-sensitive-content.md`](adr/0007-telemetry-without-sensitive-content.md) |
+| ADR-006 | [`docs/adr/0008-deterministic-core-without-llm.md`](adr/0008-deterministic-core-without-llm.md) |
+| ADR-007 | [`docs/adr/0009-reuse-existing-mcp-servers.md`](adr/0009-reuse-existing-mcp-servers.md) |
+| ADR-008 | [`docs/adr/0010-claude-code-harness-as-base.md`](adr/0010-claude-code-harness-as-base.md) |
 
 ### ADR-000 — Domínio: Mesa de Crédito (vs. AI Change Guardian)
 
@@ -57,7 +70,7 @@ Crédito?** Resultado — 4 repositórios visíveis:
 
 | Repositório | Conteúdo | Papel |
 |---|---|---|
-| `mesa-credito-multiagente` | Aplicação (monorepo uv workspace) | Demo principal, `docker compose up` |
+| `multi-agent-credit-desk` | Aplicação (monorepo uv workspace) | Demo principal, `docker compose up` |
 | `a2a-otel-kit` | Lib: OTel init, propagação `traceparent`, structlog JSON, sanitização, interceptors A2A/MCP | pip-installable, genérica |
 | `policy-model-router` | Serviço: restrições eliminatórias + tabela de workloads + registro de decisão | Imagem publicada (GHCR), genérico p/ qualquer stack LiteLLM |
 | `openfinance-br-mcp` | MCP server (já existente, mock) | Fonte de dados Open Finance |
@@ -150,8 +163,9 @@ usa o artifact store, não a telemetria.
 
 **Decisão.** Score de crédito, política de alçada e regras de bloqueio vivem
 em `packages/credit-core`, módulo Python puro, sem nenhum import de LLM/SDK
-de provedor. Hook de CI (`guard_core_no_llm`) falha o build se detectar
-import proibido — mesmo padrão já validado no Íris.
+de provedor. A lista de dependências proibidas em `scripts/validate_architecture.py` falha o
+build se detectar import não permitido — ver `docs/adr/0010-claude-code-harness-as-base.md` para
+o motivo de ser uma entrada no check já existente do harness, não um script novo.
 
 LLM atua apenas nas bordas: extração de documentos, análise qualitativa de
 fluxo de caixa, redação do parecer.
@@ -348,7 +362,7 @@ de decisão do router, versão da política aplicada, resultado do
 ## 3. Estrutura do monorepo
 
 ```
-mesa-credito-multiagente/
+multi-agent-credit-desk/
 ├── .claude/                      # harness: rules path-conditional, agents,
 │                                 # skills, hooks (guard_mcp, sensitive files)
 ├── docs/
@@ -463,7 +477,7 @@ Externo já existente: **`openfinance-br-mcp`** (mock, imagem no compose).
 ## 6. Próximos passos imediatos
 
 1. Fatiar este documento em ADRs individuais (`docs/adr/`).
-2. Bootstrap dos 3 repos via harness (`mesa-credito-multiagente`,
+2. Bootstrap dos 3 repos via harness (`multi-agent-credit-desk`,
    `a2a-otel-kit`, `policy-model-router`) e conversão do monorepo para uv
    workspace — **sem implementar agentes**.
 3. Escrever `workloads.yaml` e `litellm/config.yaml` iniciais.

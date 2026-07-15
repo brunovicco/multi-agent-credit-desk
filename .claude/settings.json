@@ -16,6 +16,7 @@
       "Bash(git branch --show-current)",
       "Bash(uv lock --check)",
       "Bash(uv sync --frozen)",
+      "Bash(uv sync --frozen --all-packages)",
       "Bash(uv run ruff *)",
       "Bash(uv run python scripts/validate_architecture.py)",
       "Bash(uv run python scripts/validate_mcp_config.py)",
