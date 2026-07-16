@@ -410,7 +410,7 @@ Externo já existente: **`openfinance-br-mcp`** (mock, imagem no compose).
 **Fundação (primeiro commit em diante — observabilidade não é etapa final):**
 - [ ] Bootstrap dos 3 repos via harness; conversão do monorepo para uv workspace
 - [ ] Forbidden-deps no `validate_architecture.py`: LLM proibido em `credit-core` + rule path-conditional correspondente
-- [ ] `packages/contracts`: schemas de artifacts, eventos, contrato do router
+- [x] `packages/contracts`: envelope de artifact, schema de eventos estruturados e contratos do router
 - [ ] `a2a-otel-kit` (repo próprio): OTel init + structlog JSON + propagação + interceptors A2A/MCP; release 0.1 pinada no monorepo
 - [ ] OTel Collector com fan-out Langfuse (default) e Datadog (perfil)
 - [ ] Compose base: Langfuse stack + Collector + LiteLLM + openfinance-br-mcp

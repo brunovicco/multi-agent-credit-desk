@@ -9,13 +9,13 @@ individually recorded decisions.
 
 ## Workspace
 
-As of Milestone 1 (workspace foundation), this repository is a uv workspace whose root is a
+As of Milestone 2 (versioned shared contracts), this repository is a uv workspace whose root is a
 **virtual coordinator** (`tool.uv.package = false` in `pyproject.toml`) — it holds no application
 code and is not itself installed. The workspace members are:
 
 | Package | Import name | Purpose |
 |---|---|---|
-| `packages/contracts` | `credit_desk_contracts` | Shared schemas, enums, and payload contracts. Scaffolded, empty. |
+| `packages/contracts` | `credit_desk_contracts` | Versioned Pydantic v2 schemas for artifact envelopes, structured events, and model-routing decisions. Agent-specific artifact payload schemas are deferred. See `packages/contracts/README.md`. |
 | `packages/credit-core` | `credit_core` | Deterministic credit scoring and policy core. Scaffolded, empty. |
 
 `credit_core` may import only the standard library and itself; every third-party or other

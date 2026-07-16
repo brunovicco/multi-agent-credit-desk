@@ -1,10 +1,10 @@
 [project]
 name = "credit-desk-contracts"
 version = "0.1.0"
-description = "Shared schemas and contracts for the credit desk workspace. No runtime dependencies."
+description = "Shared schemas and contracts for the credit desk workspace."
 readme = "README.md"
 requires-python = ">=3.13,<3.15"
-dependencies = []
+dependencies = ["pydantic>=2.9,<3"]
 
 [build-system]
 requires = ["hatchling"]
