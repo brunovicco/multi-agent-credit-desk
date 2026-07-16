@@ -416,7 +416,7 @@ Externo já existente: **`openfinance-br-mcp`** (mock, imagem no compose).
 - [ ] Compose base: Langfuse stack + Collector + LiteLLM + openfinance-br-mcp
 
 **Núcleo e routing:**
-- [ ] `credit-core`: score, política de alçada, regras de bloqueio + testes de tabela-verdade
+- [x] `credit-core`: score, política de alçada, regras de bloqueio + testes de tabela-verdade
 - [ ] `policy-model-router` (repo próprio): restrições eliminatórias + tabela workload→grupo + registro de decisão com `rejected_candidates`; imagem publicada e referenciada no compose
 - [ ] LiteLLM: 3 grupos de modelo, fallback e cooldown configurados
 

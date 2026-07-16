@@ -9,18 +9,21 @@ Finance, BCB, or credit bureau connection exists or is planned to exist without 
 separately reviewed integration. See `docs/adr/0009-reuse-existing-mcp-servers.md` for the
 transparency policy on the mock Open Finance MCP server.
 
-## Current state: Milestone 2 — versioned shared contracts
+## Current state: Milestone 3 — deterministic credit core
 
-`packages/contracts` now provides versioned Pydantic v2 schemas for artifact envelopes, structured
+`packages/contracts` provides versioned Pydantic v2 schemas for artifact envelopes, structured
 events, and model-routing decisions (see `packages/contracts/README.md`). Agent-specific artifact
-payload schemas are not implemented yet. `packages/credit-core` remains scaffolded and empty. No
-agents, no orchestrator, no MCP servers, and no scoring logic are implemented yet.
+payload schemas are not implemented yet.
+
+`packages/credit-core` now implements a deterministic, policy-driven credit evaluation core
+(score, blocking rules, approval-authority policy) behind a synthetic demo policy — see
+`packages/credit-core/README.md`. No agents, orchestrator, or MCP servers are implemented yet.
 
 ```text
 multi-agent-credit-desk/
 ├── packages/
 │   ├── contracts/      # import: credit_desk_contracts — envelope/event/routing schemas
-│   └── credit-core/     # import: credit_core — deterministic scoring/policy core (scaffolded, empty)
+│   └── credit-core/     # import: credit_core — deterministic scoring/policy core (implemented)
 ├── docs/adr/            # canonical architecture decisions (0001, 0002-0010)
 └── pyproject.toml       # virtual workspace coordinator (tool.uv.package = false); no application code
 ```
