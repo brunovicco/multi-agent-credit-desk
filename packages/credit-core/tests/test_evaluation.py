@@ -1,7 +1,7 @@
 """Truth-table, boundary, and invariant tests for evaluate_credit_application."""
 
 from dataclasses import FrozenInstanceError, replace
-from decimal import Decimal
+from decimal import Decimal, localcontext
 from typing import cast
 
 import pytest
@@ -74,16 +74,16 @@ def _tiered_snapshot(
 class TestScenarios:
     """Named synthetic company scenarios covering the decision truth table."""
 
-    def test_healthy_company_is_automatically_approved(
+    def test_healthy_company_receives_approval_recommendation(
         self, healthy_snapshot: CreditApplicationSnapshot
     ) -> None:
         result = evaluate_credit_application(healthy_snapshot)
         assert result.total_score == Decimal("100.00")
-        assert result.decision is Decision.AUTOMATIC_APPROVAL
+        assert result.decision is Decision.APPROVAL_RECOMMENDED
         assert result.approval_authority is ApprovalAuthority.ANALYST
         assert result.blocking_reasons == ()
         assert result.reason_codes == (
-            ReasonCode.SCORE_MEETS_AUTOMATIC_APPROVAL_THRESHOLD,
+            ReasonCode.SCORE_MEETS_APPROVAL_RECOMMENDATION_THRESHOLD,
             ReasonCode.REQUESTED_AMOUNT_WITHIN_ANALYST_AUTHORITY,
         )
 
@@ -150,7 +150,7 @@ class TestScoreDecisionBoundaries:
             "expected_decision",
         ),
         [
-            (100, 60, 60, 100, Decimal("80.00"), Decision.AUTOMATIC_APPROVAL),
+            (100, 60, 60, 100, Decimal("80.00"), Decision.APPROVAL_RECOMMENDED),
             (100, 60, 60, 80, Decimal("78.00"), Decision.CONDITIONAL_APPROVAL),
             (0, 100, 100, 100, Decimal("60.00"), Decision.CONDITIONAL_APPROVAL),
             (0, 80, 100, 100, Decimal("55.00"), Decision.COMMITTEE_REFERRAL),
@@ -221,6 +221,16 @@ class TestApprovalAuthorityBoundaries:
         result = evaluate_credit_application(snapshot)
 
         assert result.decision is Decision.COMMITTEE_REFERRAL
+        assert result.approval_authority is ApprovalAuthority.EXECUTIVE_BOARD
+
+    def test_approval_recommendation_keeps_amount_based_executive_authority(
+        self, healthy_snapshot: CreditApplicationSnapshot
+    ) -> None:
+        snapshot = replace(healthy_snapshot, requested_amount=Decimal("1000000.01"))
+
+        result = evaluate_credit_application(snapshot)
+
+        assert result.decision is Decision.APPROVAL_RECOMMENDED
         assert result.approval_authority is ApprovalAuthority.EXECUTIVE_BOARD
 
 
@@ -343,6 +353,27 @@ class TestDeterminismAndImmutability:
         first = evaluate_credit_application(healthy_snapshot)
         second = evaluate_credit_application(healthy_snapshot)
         assert first == second
+
+    def test_evaluation_is_independent_of_callers_decimal_context(
+        self, healthy_snapshot: CreditApplicationSnapshot
+    ) -> None:
+        snapshot = replace(
+            healthy_snapshot,
+            annual_revenue=Decimal("1000000"),
+            total_debt=Decimal("500000.4"),
+        )
+
+        with localcontext() as external_context:
+            external_context.prec = 28
+            high_precision_result = evaluate_credit_application(snapshot)
+
+        with localcontext() as external_context:
+            external_context.prec = 6
+            low_precision_result = evaluate_credit_application(snapshot)
+
+        assert low_precision_result == high_precision_result
+        assert low_precision_result.total_score == Decimal("95.00")
+        assert low_precision_result.component_scores[1].metric_value == Decimal("0.5000004")
 
     def test_snapshot_is_immutable(self, healthy_snapshot: CreditApplicationSnapshot) -> None:
         with pytest.raises(FrozenInstanceError):

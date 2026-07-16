@@ -6,7 +6,7 @@ randomness - the same snapshot and policy always produce an equal
 ``CreditEvaluationResult``.
 """
 
-from decimal import ROUND_HALF_EVEN, Decimal
+from decimal import ROUND_HALF_EVEN, Context, Decimal, localcontext
 
 from credit_core.domain import (
     ApprovalAuthority,
@@ -30,6 +30,7 @@ from credit_core.policy import (
 
 _MIN_BUREAU_SCORE = Decimal("0")
 _MAX_BUREAU_SCORE = Decimal("1000")
+_EVALUATION_CONTEXT = Context(prec=28, rounding=ROUND_HALF_EVEN)
 _DECIMAL_SNAPSHOT_FIELDS = (
     "annual_revenue",
     "total_debt",
@@ -126,6 +127,14 @@ def evaluate_credit_application(
     validate_policy(policy)
     validate_snapshot(snapshot)
 
+    with localcontext(_EVALUATION_CONTEXT):
+        return _evaluate_validated(snapshot, policy)
+
+
+def _evaluate_validated(
+    snapshot: CreditApplicationSnapshot,
+    policy: CreditPolicy,
+) -> CreditEvaluationResult:
     component_scores = tuple(
         _score_component(component_policy, snapshot, policy)
         for component_policy in policy.score_components
@@ -214,8 +223,11 @@ def _raw_score(metric_value: Decimal, component_policy: ScoreComponentPolicy) ->
 
 
 def _decide(total_score: Decimal, policy: CreditPolicy) -> tuple[Decision, ReasonCode]:
-    if total_score >= policy.automatic_approval_minimum_score:
-        return Decision.AUTOMATIC_APPROVAL, ReasonCode.SCORE_MEETS_AUTOMATIC_APPROVAL_THRESHOLD
+    if total_score >= policy.approval_recommendation_minimum_score:
+        return (
+            Decision.APPROVAL_RECOMMENDED,
+            ReasonCode.SCORE_MEETS_APPROVAL_RECOMMENDATION_THRESHOLD,
+        )
     if total_score >= policy.conditional_approval_minimum_score:
         return (
             Decision.CONDITIONAL_APPROVAL,

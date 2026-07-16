@@ -33,7 +33,7 @@ version in a trace, a log, or an evidence bundle.
 | `ComponentScore` | frozen dataclass | One component's metric value, raw score, weight, and weighted score. |
 | `CreditEvaluationResult` | frozen dataclass | The full evaluation outcome: policy version, total score, component breakdown, decision, approval authority, reason codes, blocking reasons. |
 | `ScoreComponent` | enum | `BUREAU_SCORE`, `LEVERAGE_RATIO`, `DEBT_SERVICE_COVERAGE`, `OPERATING_HISTORY`. |
-| `Decision` | enum | `AUTOMATIC_APPROVAL`, `CONDITIONAL_APPROVAL`, `COMMITTEE_REFERRAL`, `DECLINE`, `BLOCKED`. |
+| `Decision` | enum | `APPROVAL_RECOMMENDED`, `CONDITIONAL_APPROVAL`, `COMMITTEE_REFERRAL`, `DECLINE`, `BLOCKED`. |
 | `ApprovalAuthority` | enum | `NONE`, `ANALYST`, `SENIOR_ANALYST`, `CREDIT_COMMITTEE`, `EXECUTIVE_BOARD`. |
 | `CriticalFlag` | enum | `BANKRUPTCY_FILING`, `SEVERE_PAYMENT_DEFAULT`, `FRAUD_ALERT` — synthetic red flags. |
 | `ReasonCode` | enum | Stable, deterministic reason codes for every decision, authority, and block outcome. |
@@ -54,8 +54,9 @@ infinity are rejected with domain-specific errors. `years_in_operation` must be 
    perfect score does not override a critical flag. The score and its full component breakdown
    are still computed and returned, so the result stays fully auditable.
 2. Otherwise, the total score decides `decision` via `DEMO_POLICY_V1`'s thresholds (all
-   minimum-inclusive): `>= 80` automatic approval, `>= 60` conditional approval, `>= 40` committee
-   referral, below `40` decline.
+   minimum-inclusive): `>= 80` approval recommended, `>= 60` conditional approval, `>= 40`
+   committee referral, below `40` decline. `APPROVAL_RECOMMENDED` is a score outcome, not a claim
+   that human authority is bypassed; `approval_authority` remains the separate authorization axis.
 3. For approval decisions, `approval_authority` is derived from `snapshot.requested_amount` (all
    maximum-inclusive): `<= 50,000` analyst, `<= 250,000` senior analyst, `<= 1,000,000` credit
    committee, above that executive board. `COMMITTEE_REFERRAL` always requires at least
@@ -88,10 +89,13 @@ the zero-debt-service edge case to a less favorable band.
 ### Decimal quantization strategy
 
 All monetary amounts, ratios, weights, and scores are `Decimal`; no `float` appears in the
-decision path. Every weighted component score is quantized to `credit_core.policy.SCORE_QUANTUM`
-(`Decimal("0.01")`) using `ROUND_HALF_EVEN` (banker's rounding). `total_score` is the exact sum of
-those already-quantized weighted scores, re-quantized once more with the same unit and rounding
-mode as a defensive final step. There is no other rounding anywhere in the evaluation path, and
+decision path. Evaluation runs inside a private local decimal context with precision `28` and
+`ROUND_HALF_EVEN`, so caller changes to the process or task's decimal context cannot change a
+score. The global decimal context is never modified. Every weighted component score is quantized
+to `credit_core.policy.SCORE_QUANTUM` (`Decimal("0.01")`) using `ROUND_HALF_EVEN` (banker's
+rounding). `total_score` is the exact sum of those already-quantized weighted scores, re-quantized
+once more with the same unit and rounding mode as a defensive final step. There is no other
+rounding anywhere in the evaluation path, and
 `sum(component.weighted_score for component in result.component_scores) == result.total_score`
 holds exactly for every result.
 
@@ -104,7 +108,7 @@ the snapshot, sorted by flag name for determinism.
 
 | Reason code | Meaning |
 |---|---|
-| `SCORE_MEETS_AUTOMATIC_APPROVAL_THRESHOLD` | Total score `>= 80`. |
+| `SCORE_MEETS_APPROVAL_RECOMMENDATION_THRESHOLD` | Total score `>= 80`; approval is recommended, subject to the reported authority. |
 | `SCORE_MEETS_CONDITIONAL_APPROVAL_THRESHOLD` | Total score `>= 60` and `< 80`. |
 | `SCORE_MEETS_COMMITTEE_REFERRAL_THRESHOLD` | Total score `>= 40` and `< 60`. |
 | `SCORE_BELOW_COMMITTEE_REFERRAL_THRESHOLD` | Total score `< 40`; decision is decline. |
@@ -136,7 +140,7 @@ snapshot = CreditApplicationSnapshot(
 )
 
 result = evaluate_credit_application(snapshot)  # uses DEMO_POLICY_V1 by default
-result.decision            # Decision.AUTOMATIC_APPROVAL
+result.decision            # Decision.APPROVAL_RECOMMENDED
 result.approval_authority  # ApprovalAuthority.ANALYST
 result.total_score          # Decimal("100.00")
 ```

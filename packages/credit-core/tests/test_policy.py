@@ -213,7 +213,10 @@ def test_ascending_bands_not_covering_infinity_are_rejected() -> None:
 
 
 def test_decision_threshold_out_of_range_is_rejected() -> None:
-    broken = dataclasses.replace(DEMO_POLICY_V1, automatic_approval_minimum_score=Decimal("120"))
+    broken = dataclasses.replace(
+        DEMO_POLICY_V1,
+        approval_recommendation_minimum_score=Decimal("120"),
+    )
     with pytest.raises(InvalidCreditPolicyError):
         validate_policy(broken)
 
@@ -225,7 +228,7 @@ def test_decision_threshold_out_of_range_is_rejected() -> None:
 def test_non_finite_decision_threshold_is_rejected(non_finite_value: Decimal) -> None:
     broken = dataclasses.replace(
         DEMO_POLICY_V1,
-        automatic_approval_minimum_score=non_finite_value,
+        approval_recommendation_minimum_score=non_finite_value,
     )
 
     with pytest.raises(InvalidCreditPolicyError, match="must be finite"):

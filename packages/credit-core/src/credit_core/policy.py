@@ -76,10 +76,10 @@ class CreditPolicy:
         version: A version identifier included in every ``CreditEvaluationResult``.
         score_components: Exactly one ``ScoreComponentPolicy`` per ``ScoreComponent`` member,
             with weights summing to exactly ``1.00``.
-        automatic_approval_minimum_score: Minimum total score, inclusive, for automatic
-            approval.
+        approval_recommendation_minimum_score: Minimum total score, inclusive, for an approval
+            recommendation. The required approval authority is evaluated separately.
         conditional_approval_minimum_score: Minimum total score, inclusive, for conditional
-            approval. Must be strictly less than ``automatic_approval_minimum_score``.
+            approval. Must be strictly less than ``approval_recommendation_minimum_score``.
         committee_referral_minimum_score: Minimum total score, inclusive, for committee
             referral. Must be strictly less than ``conditional_approval_minimum_score``. Any
             score below this threshold is declined.
@@ -99,7 +99,7 @@ class CreditPolicy:
 
     version: str
     score_components: tuple[ScoreComponentPolicy, ...]
-    automatic_approval_minimum_score: Decimal
+    approval_recommendation_minimum_score: Decimal
     conditional_approval_minimum_score: Decimal
     committee_referral_minimum_score: Decimal
     analyst_maximum_amount: Decimal
@@ -250,13 +250,13 @@ def _validate_ascending_bands(component_policy: ScoreComponentPolicy) -> None:
 
 def _validate_decision_thresholds(policy: CreditPolicy) -> None:
     thresholds = (
-        policy.automatic_approval_minimum_score,
+        policy.approval_recommendation_minimum_score,
         policy.conditional_approval_minimum_score,
         policy.committee_referral_minimum_score,
     )
     for field_name, threshold in zip(
         (
-            "automatic_approval_minimum_score",
+            "approval_recommendation_minimum_score",
             "conditional_approval_minimum_score",
             "committee_referral_minimum_score",
         ),
@@ -270,7 +270,7 @@ def _validate_decision_thresholds(policy: CreditPolicy) -> None:
             )
     if not (thresholds[0] > thresholds[1] > thresholds[2]):
         raise InvalidCreditPolicyError(
-            "decision thresholds must be strictly decreasing: automatic approval > "
+            "decision thresholds must be strictly decreasing: approval recommendation > "
             "conditional approval > committee referral."
         )
 
@@ -384,7 +384,7 @@ DEMO_POLICY_V1 = CreditPolicy(
             ),
         ),
     ),
-    automatic_approval_minimum_score=Decimal("80"),
+    approval_recommendation_minimum_score=Decimal("80"),
     conditional_approval_minimum_score=Decimal("60"),
     committee_referral_minimum_score=Decimal("40"),
     analyst_maximum_amount=Decimal("50000"),
