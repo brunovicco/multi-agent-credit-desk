@@ -60,6 +60,8 @@ domain      -> no outer layer
 - Entrypoints validate external input and map transport contracts to application contracts.
 - Translate infrastructure exceptions at adapter boundaries.
 - Add complete type hints; keep Mypy strict and avoid `Any` beyond validated boundaries.
+- Follow `.claude/rules/python-imports.md`: do not postpone annotation evaluation, and never use
+  relative imports.
 - Prefer immutable domain values. Use Pydantic for external contracts and configuration.
 - Use `Decimal` for money and timezone-aware UTC datetimes internally.
 - Keep configuration outside code, processes stateless, and logs on stdout/stderr.
