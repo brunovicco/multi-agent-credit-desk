@@ -6,7 +6,7 @@ paths:
 # credit-core determinism rules
 
 - `credit_core` is a pure deterministic package: it may import only the Python standard library
-  and itself. Every third-party import and every other workspace package is rejected by default —
+  and itself. Every third-party import and every other workspace package is rejected by default -
   this is not an enumerated denylist, it is default-deny.
 - Dynamic import mechanisms (`importlib`, `__import__`) are explicitly forbidden, even though
   `importlib` is part of the standard library, because both exist to bypass static import

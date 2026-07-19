@@ -16,7 +16,7 @@
 | Model routing | Which model group serves the workload? | `model-router` (infrastructure service) |
 | Provider routing | Which deployment/provider serves the call? | LiteLLM Gateway |
 
-`model-router` is not an A2A agent — it is infrastructure, called over HTTP by agents before each
+`model-router` is not an A2A agent - it is infrastructure, called over HTTP by agents before each
 LLM call.
 
 ## Consequences

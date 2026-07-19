@@ -1,4 +1,4 @@
-# Mesa de Crédito Multi-Agente — Blueprint de Arquitetura
+# Mesa de Crédito Multi-Agente - Blueprint de Arquitetura
 
 **Versão:** 0.2 · **Data:** 2026-07-15 · **Autor:** Vicco
 **Status:** Aprovado para fase de scaffold (sem implementação de agentes)
@@ -39,7 +39,7 @@ como registro canônico. As seções abaixo estão preservadas para contexto nar
 | ADR-007 | [`docs/adr/0009-reuse-existing-mcp-servers.md`](adr/0009-reuse-existing-mcp-servers.md) |
 | ADR-008 | [`docs/adr/0010-claude-code-harness-as-base.md`](adr/0010-claude-code-harness-as-base.md) |
 
-### ADR-000 — Domínio: Mesa de Crédito (vs. AI Change Guardian)
+### ADR-000 - Domínio: Mesa de Crédito (vs. AI Change Guardian)
 
 **Contexto.** Dois domínios candidatos com o mesmo conteúdo de engenharia
 (A2A, MCP, routing, observabilidade): revisão de mudanças de software
@@ -49,24 +49,24 @@ como registro canônico. As seções abaixo estão preservadas para contexto nar
 
 **Justificativa.**
 1. Alinhamento com a narrativa profissional (20+ anos em banking/financial no Brasil) e com as vagas-alvo (BTG, EY, instituições reguladas).
-2. Reuso direto do **Open Finance BR MCP Server** já open-sourced — diferencial que nenhuma demo genérica tem.
+2. Reuso direto do **Open Finance BR MCP Server** já open-sourced - diferencial que nenhuma demo genérica tem.
 3. O domínio de crédito força os requisitos mais interessantes: classificação de dados (LGPD, LC 105/2001), restrição modelo local vs. externo, decisão determinística de alçada, trilha de auditoria.
 4. AI code review é um espaço saturado; mesa de crédito com A2A + trace distribuído é praticamente inédito como demo pública.
 
 **Consequências.** Dados de clientes serão sintéticos (mock BCB Open Finance).
 O README deve deixar explícito que é ambiente demonstrativo. Perde-se a
-facilidade de demo com PRs reais do GitHub — aceito.
+facilidade de demo com PRs reais do GitHub - aceito.
 
-### ADR-001 — Monorepo da aplicação + bibliotecas extraídas (rev. na 0.2)
+### ADR-001 - Monorepo da aplicação + bibliotecas extraídas (rev. na 0.2)
 
 **Contexto.** Proposta original previa 12 repositórios; a v0.1 deste documento
 decidiu monorepo puro. Revisão: repositórios separados têm valor real de
 portfólio (visibilidade no perfil, README próprio, instalabilidade
-independente) — mas o critério de corte não pode ser espelhar a arquitetura
+independente) - mas o critério de corte não pode ser espelhar a arquitetura
 em repos.
 
 **Decisão.** Critério de extração: **tem valor standalone fora da Mesa de
-Crédito?** Resultado — 4 repositórios visíveis:
+Crédito?** Resultado - 4 repositórios visíveis:
 
 | Repositório | Conteúdo | Papel |
 |---|---|---|
@@ -77,7 +77,7 @@ Crédito?** Resultado — 4 repositórios visíveis:
 
 O monorepo consome `a2a-otel-kit` como **dependência pinada** (release tags +
 changelog, atualização via PR) e `policy-model-router` como **imagem no
-compose** — demonstrando versionamento de contrato entre repositórios de
+compose** - demonstrando versionamento de contrato entre repositórios de
 verdade, sem pagar o custo de 12.
 
 Permanecem no monorepo (sem audiência standalone): orchestrator, 4 agentes,
@@ -85,10 +85,10 @@ Permanecem no monorepo (sem audiência standalone): orchestrator, 4 agentes,
 
 **Consequências.** Overhead de release só onde há valor. Fatiar os agentes
 mataria a experiência de avaliação em um comando. Interfaces das libs em
-0.x podem mudar rápido no início — mitigado por testes de contrato no
+0.x podem mudar rápido no início - mitigado por testes de contrato no
 monorepo e releases frequentes.
 
-### ADR-002 — Três camadas de roteamento separadas
+### ADR-002 - Três camadas de roteamento separadas
 
 **Contexto.** "Roteamento" mistura três decisões distintas.
 
@@ -100,14 +100,14 @@ monorepo e releases frequentes.
 | Model routing | Qual grupo de modelo atende o workload? | `model-router` (serviço de infraestrutura) |
 | Provider routing | Qual deployment/provedor atende a chamada? | LiteLLM Gateway |
 
-O `model-router` **não é um agente A2A** — é infraestrutura, chamado por HTTP
+O `model-router` **não é um agente A2A** - é infraestrutura, chamado por HTTP
 pelos agentes antes de cada chamada de LLM.
 
 **Consequências.** Troca do mecanismo de model routing (ex.: adicionar
 RouteLLM na Fase 3) não altera agentes nem o protocolo A2A. LiteLLM cuida de
 abstração de provedores, retries, cooldowns e fallback dentro do grupo.
 
-### ADR-003 — Router determinístico policy-based no MVP (sem score ponderado)
+### ADR-003 - Router determinístico policy-based no MVP (sem score ponderado)
 
 **Contexto.** A proposta original incluía função de score
 (`capability_fit × 0.35 + expected_quality × 0.25 + ...`). Termos como
@@ -129,7 +129,7 @@ houver dados de avaliação por workload.
 **Consequências.** Router 100% explicável e testável por tabela-verdade.
 Nenhum número inventado fingindo ser engenharia.
 
-### ADR-004 — Observabilidade: OTel com fan-out para Datadog e Langfuse
+### ADR-004 - Observabilidade: OTel com fan-out para Datadog e Langfuse
 
 **Contexto.** Datadog é keyword de mercado, mas exige conta paga e quem clona
 o repo não reproduz as traces. Langfuse é self-hosted e cobre a camada genAI
@@ -139,16 +139,16 @@ o repo não reproduz as traces. Langfuse é self-hosted e cobre a camada genAI
 conventions `gen_ai.*`), propagação **W3C `traceparent`** em todas as chamadas
 (A2A, model-router, MCP, filas). Um **OTel Collector** central faz fan-out:
 
-- exporter **Datadog** (APM + LLM Observability) — ativado por perfil, para o ambiente com conta;
-- exporter **OTLP → Langfuse** self-hosted — sempre ativo no compose, reproduzível por qualquer avaliador.
+- exporter **Datadog** (APM + LLM Observability) - ativado por perfil, para o ambiente com conta;
+- exporter **OTLP → Langfuse** self-hosted - sempre ativo no compose, reproduzível por qualquer avaliador.
 
 Callback nativo LiteLLM → Langfuse complementa custo/tokens por chamada.
 
 **Consequências.** "Backend-agnostic by design" vira feature demonstrável.
 O compose fica mais pesado (Langfuse v3 = Postgres + ClickHouse + Redis +
-MinIO) — aceito, é fiel a produção.
+MinIO) - aceito, é fiel a produção.
 
-### ADR-005 — Telemetria sem conteúdo sensível por padrão
+### ADR-005 - Telemetria sem conteúdo sensível por padrão
 
 **Decisão.** Prompts, respostas, documentos e dados de cliente **não** são
 enviados integralmente à telemetria. Registra-se: hashes, tamanhos, contagem
@@ -159,12 +159,12 @@ por ambiente (`TELEMETRY_CAPTURE_CONTENT`), desabilitada por padrão.
 **Consequências.** Coerente com LGPD/LC 105 mesmo em demo. Debugging profundo
 usa o artifact store, não a telemetria.
 
-### ADR-006 — Núcleo determinístico sem LLM (guard em CI)
+### ADR-006 - Núcleo determinístico sem LLM (guard em CI)
 
 **Decisão.** Score de crédito, política de alçada e regras de bloqueio vivem
 em `packages/credit-core`, módulo Python puro, sem nenhum import de LLM/SDK
 de provedor. A lista de dependências proibidas em `scripts/validate_architecture.py` falha o
-build se detectar import não permitido — ver `docs/adr/0010-claude-code-harness-as-base.md` para
+build se detectar import não permitido - ver `docs/adr/0010-claude-code-harness-as-base.md` para
 o motivo de ser uma entrada no check já existente do harness, não um script novo.
 
 LLM atua apenas nas bordas: extração de documentos, análise qualitativa de
@@ -173,25 +173,25 @@ fluxo de caixa, redação do parecer.
 **Consequências.** A decisão de crédito é reproduzível e auditável por
 construção. `policy.decision` no trace aponta para versão da política aplicada.
 
-### ADR-007 — Reuso de MCP servers existentes
+### ADR-007 - Reuso de MCP servers existentes
 
 **Decisão.** Não escrever MCP servers do zero quando existir opção madura:
 
-- **openfinance-br-mcp** (próprio, open-sourced) — dados bancários do cliente;
-- **bureau-mcp** (novo, pequeno) — mock de bureau de crédito (score externo, negativações), justificado por não existir equivalente;
-- **policy-mcp** (novo, pequeno) — catálogo versionado de políticas de crédito consultável pelos agentes.
+- **openfinance-br-mcp** (próprio, open-sourced) - dados bancários do cliente;
+- **bureau-mcp** (novo, pequeno) - mock de bureau de crédito (score externo, negativações), justificado por não existir equivalente;
+- **policy-mcp** (novo, pequeno) - catálogo versionado de políticas de crédito consultável pelos agentes.
 
 **Transparência do mock.** O `openfinance-br-mcp` **não acessa o ecossistema
 Open Finance real** (sem conta de consulta). Posicionamento honesto no README:
 "implementação do protocolo MCP sobre dados sintéticos no formato Open
 Finance BR". O valor demonstrável é a implementação do protocolo + o modelo
-de dados BR — e vira ponto a favor: **a demo completa roda sem credencial
+de dados BR - e vira ponto a favor: **a demo completa roda sem credencial
 alguma** (nem BCB, nem Datadog).
 
 **Consequências.** Reuso demonstra senioridade; os dois MCPs novos são
 pequenos e de domínio, não infraestrutura reinventada.
 
-### ADR-008 — `claude-python-engineering-harness` como base de todos os repos
+### ADR-008 - `claude-python-engineering-harness` como base de todos os repos
 
 **Contexto.** Harness próprio e público (`bootstrap.py`, scaffold
 CLAUDE.md/AGENTS.md, rules path-conditional, hooks fail-closed, agents,
@@ -205,9 +205,9 @@ skills, CI com Ruff/Mypy/Pytest/Bandit/pip-audit, governança MCP,
 2. **Monorepo**: bootstrap na raiz **uma vez** + conversão do `pyproject.toml`
    para uv workspace. `.claude/` único na raiz, usando rules path-conditional
    por pacote (ex.: rule em `packages/credit-core/` proibindo LLM). Não
-   bootstrapar por serviço — duplicaria o `.claude/` oito vezes.
+   bootstrapar por serviço - duplicaria o `.claude/` oito vezes.
 3. **Guard do núcleo determinístico**: implementado como entrada na
-   forbidden-dependency list do `validate_architecture.py` do harness — não
+   forbidden-dependency list do `validate_architecture.py` do harness - não
    como script novo.
 4. **Governança MCP do harness ativa** (`guard_mcp.py`,
    `validate_mcp_config.py`, `/review-mcp`): o projeto consome 3 MCP servers,
@@ -341,14 +341,14 @@ Tags principais: `service`, `env`, `version`, `agent.name`, `agent.skill`,
 
 `structlog` JSON, schema único versionado em `packages/contracts`
 (`schema_version`), com `trace_id`/`span_id` injetados do contexto OTel.
-Todo evento relevante carrega `event_name` + `event_outcome` — mensagem livre
+Todo evento relevante carrega `event_name` + `event_outcome` - mensagem livre
 nunca é o único conteúdo.
 
 Taxonomia (enum em contracts): `workflow.*`, `a2a.agent.discovered`,
 `a2a.task.*`, `agent.execution.*`, `model.routing.*`,
 `model.fallback.triggered`, `llm.request.*`, `mcp.tool.*`, `artifact.*`,
 `policy.evaluation.completed`, `credit.decision.issued`,
-`human.approval.*` (reservado — HITL entra na Fase 2).
+`human.approval.*` (reservado - HITL entra na Fase 2).
 
 ### 2.6 Evidence bundle
 
@@ -405,13 +405,13 @@ Externo já existente: **`openfinance-br-mcp`** (mock, imagem no compose).
 
 ## 4. Backlog por fase
 
-### Fase 1 — MVP
+### Fase 1 - MVP
 
-**Fundação (primeiro commit em diante — observabilidade não é etapa final):**
+**Fundação (primeiro commit em diante - observabilidade não é etapa final):**
 - [ ] Bootstrap dos 3 repos via harness; conversão do monorepo para uv workspace
 - [ ] Forbidden-deps no `validate_architecture.py`: LLM proibido em `credit-core` + rule path-conditional correspondente
 - [x] `packages/contracts`: envelope de artifact, schema de eventos estruturados e contratos do router
-- [ ] `a2a-otel-kit` (repo próprio): OTel init + structlog JSON + propagação + interceptors A2A/MCP; release 0.1 pinada no monorepo
+- [x] `a2a-otel-kit` (repo próprio): OTel init + structlog JSON + propagação + interceptors A2A/MCP; release 0.4.2 pinada no monorepo (sem consumidor em `services/*` ainda - ver `docs/ARCHITECTURE.md`)
 - [ ] OTel Collector com fan-out Langfuse (default) e Datadog (perfil)
 - [ ] Compose base: Langfuse stack + Collector + LiteLLM + openfinance-br-mcp
 
@@ -479,6 +479,6 @@ Externo já existente: **`openfinance-br-mcp`** (mock, imagem no compose).
 1. Fatiar este documento em ADRs individuais (`docs/adr/`).
 2. Bootstrap dos 3 repos via harness (`multi-agent-credit-desk`,
    `a2a-otel-kit`, `policy-model-router`) e conversão do monorepo para uv
-   workspace — **sem implementar agentes**.
+   workspace - **sem implementar agentes**.
 3. Escrever `workloads.yaml` e `litellm/config.yaml` iniciais.
 4. Definir os 3 cenários de demo (personas PJ) em `docs/demo-script.md`.

@@ -18,7 +18,7 @@ Rationale:
 
 1. Alignment with the author's professional narrative (20+ years in banking/financial services in
    Brazil) and target roles (BTG, EY, regulated institutions).
-2. Direct reuse of the already open-sourced Open Finance BR MCP Server — a differentiator no
+2. Direct reuse of the already open-sourced Open Finance BR MCP Server - a differentiator no
    generic demo has.
 3. The credit domain forces the most interesting requirements: data classification (LGPD, LC
    105/2001), local-vs-external model constraints, deterministic approval-authority decisions, and
@@ -29,5 +29,5 @@ Rationale:
 ## Consequences
 
 Customer data will be synthetic (mock BCB Open Finance). The README must state explicitly that
-this is a demonstration environment. The ease of demoing against real GitHub PRs is lost —
+this is a demonstration environment. The ease of demoing against real GitHub PRs is lost -
 accepted.

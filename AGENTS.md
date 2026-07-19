@@ -7,7 +7,7 @@
 - Layout: uv workspace. Root `pyproject.toml` is a **virtual coordinator**
   (`tool.uv.package = false`) with no application code and no source tree of its own. Workspace
   packages: `packages/contracts` (import `credit_desk_contracts`) and `packages/credit-core`
-  (import `credit_core`, deterministic, zero third-party/dynamic imports — enforced by
+  (import `credit_core`, deterministic, zero third-party/dynamic imports - enforced by
   `scripts/validate_architecture.py`). Future application entrypoints belong under `services/`
   (not yet created), not in a root application package.
 - Tests: pytest

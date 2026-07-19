@@ -1,10 +1,11 @@
 # syntax=docker/dockerfile:1
 #
-# Workspace validation image for Milestone 1 (workspace foundation). The root pyproject.toml is a
-# virtual uv workspace coordinator with no application code, so there is no application runtime
-# entrypoint yet. This image only proves the uv workspace builds and both packages import cleanly;
-# it is NOT an application runtime image. A future milestone replaces the CMD below with a real
-# service entrypoint under services/.
+# Workspace validation image. The root pyproject.toml is a virtual uv workspace coordinator with
+# no application code, so there is no application runtime entrypoint yet. This image only proves
+# the uv workspace builds, both workspace packages import cleanly, and the pinned a2a-otel-kit
+# dependency (ADR-0003) resolves and imports cleanly ahead of any services/* consumer; it is NOT
+# an application runtime image. A future milestone replaces the CMD below with a real service
+# entrypoint under services/.
 
 FROM python:3.13-slim AS builder
 
@@ -36,4 +37,4 @@ ENV PATH="/app/.venv/bin:$PATH" \
 USER app
 
 # Workspace integrity check only - not an application runtime command.
-CMD ["python", "-c", "import credit_core, credit_desk_contracts; print('workspace import check ok:', credit_core.__name__, credit_desk_contracts.__name__)"]
+CMD ["python", "-c", "import a2a_otel_kit, credit_core, credit_desk_contracts; print('workspace import check ok:', credit_core.__name__, credit_desk_contracts.__name__, a2a_otel_kit.__name__)"]

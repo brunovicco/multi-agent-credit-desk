@@ -1,14 +1,14 @@
 # credit-core
 
 Deterministic credit scoring, approval-authority policy, and blocking rules for the Multi-Agent
-Credit Desk. Zero LLM in the decision path — see `docs/adr/0008-deterministic-core-without-llm.md`.
+Credit Desk. Zero LLM in the decision path - see `docs/adr/0008-deterministic-core-without-llm.md`.
 
 ## Import policy
 
 `credit_core` allows only standard-library imports and imports of itself. Every third-party
 import, every other workspace package, and dynamic import mechanisms (`importlib`, `__import__`)
 are rejected by default. This is enforced by `scripts/validate_architecture.py` and documented in
-`.claude/rules/credit-core.md` — it is not a convention to remember, it is a build-breaking check.
+`.claude/rules/credit-core.md` - it is not a convention to remember, it is a build-breaking check.
 This package also uses only absolute imports (`from credit_core.module import Member`), never
 relative imports, and never `from __future__ import annotations`; both are covered by a regression
 test in `tests/test_import_isolation.py` in addition to the shared architecture check.
@@ -18,7 +18,7 @@ test in `tests/test_import_isolation.py` in addition to the shared architecture 
 Every weight, score band, decision threshold, and approval-authority amount shipped in
 `credit_core.policy.DEMO_POLICY_V1` is **invented for this project's tests and demonstrations**.
 The architecture blueprint deliberately does not specify numeric thresholds or weights for a real
-credit policy — see `docs/architecture-blueprint.md`. Nothing in this package should be read,
+credit policy - see `docs/architecture-blueprint.md`. Nothing in this package should be read,
 copied, or deployed as an actual credit risk policy. The name `credit-core-demo-policy-v1`
 (`DEMO_POLICY_V1.version`) is chosen specifically so it cannot be mistaken for a production policy
 version in a trace, a log, or an evidence bundle.
@@ -35,7 +35,7 @@ version in a trace, a log, or an evidence bundle.
 | `ScoreComponent` | enum | `BUREAU_SCORE`, `LEVERAGE_RATIO`, `DEBT_SERVICE_COVERAGE`, `OPERATING_HISTORY`. |
 | `Decision` | enum | `APPROVAL_RECOMMENDED`, `CONDITIONAL_APPROVAL`, `COMMITTEE_REFERRAL`, `DECLINE`, `BLOCKED`. |
 | `ApprovalAuthority` | enum | `NONE`, `ANALYST`, `SENIOR_ANALYST`, `CREDIT_COMMITTEE`, `EXECUTIVE_BOARD`. |
-| `CriticalFlag` | enum | `BANKRUPTCY_FILING`, `SEVERE_PAYMENT_DEFAULT`, `FRAUD_ALERT` — synthetic red flags. |
+| `CriticalFlag` | enum | `BANKRUPTCY_FILING`, `SEVERE_PAYMENT_DEFAULT`, `FRAUD_ALERT` - synthetic red flags. |
 | `ReasonCode` | enum | Stable, deterministic reason codes for every decision, authority, and block outcome. |
 
 The single pure entrypoint is `evaluate_credit_application(snapshot, policy=DEMO_POLICY_V1)` in
@@ -50,7 +50,7 @@ infinity are rejected with domain-specific errors. `years_in_operation` must be 
 ## Decision precedence
 
 1. **Critical blocking rules always take precedence.** If `snapshot.critical_flags` is non-empty,
-   `decision` is `BLOCKED` and `approval_authority` is `NONE`, regardless of the total score — a
+   `decision` is `BLOCKED` and `approval_authority` is `NONE`, regardless of the total score - a
    perfect score does not override a critical flag. The score and its full component breakdown
    are still computed and returned, so the result stays fully auditable.
 2. Otherwise, the total score decides `decision` via `DEMO_POLICY_V1`'s thresholds (all
@@ -156,7 +156,7 @@ flagged = replace(snapshot, critical_flags=frozenset({CriticalFlag.FRAUD_ALERT})
 result = evaluate_credit_application(flagged)
 result.decision            # Decision.BLOCKED
 result.approval_authority  # ApprovalAuthority.NONE
-result.total_score          # Decimal("100.00") — still computed, still auditable
+result.total_score          # Decimal("100.00") - still computed, still auditable
 ```
 
 ## Testing
