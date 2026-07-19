@@ -8,7 +8,7 @@
 
 Credit score, approval-authority policy, and blocking rules live in `packages/credit-core`, a
 pure Python module with no LLM/provider-SDK imports. The forbidden-dependency list in
-`scripts/validate_architecture.py` fails the build if it detects a disallowed import — see
+`scripts/validate_architecture.py` fails the build if it detects a disallowed import - see
 `docs/adr/0010-claude-code-harness-as-base.md` for why this is an entry in the harness's existing
 check rather than a new script.
 

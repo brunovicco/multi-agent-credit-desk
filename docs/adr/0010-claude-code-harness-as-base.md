@@ -18,10 +18,10 @@ All project repositories are born from the harness:
    (`--git-init --lock`).
 2. **Monorepo**: bootstrap at the root once, plus conversion of `pyproject.toml` to a uv workspace.
    A single `.claude/` at the root, using path-conditional rules per package (e.g., a rule in
-   `packages/credit-core/` forbidding LLM imports). Do not bootstrap per service — that would
+   `packages/credit-core/` forbidding LLM imports). Do not bootstrap per service - that would
    duplicate `.claude/` eight times.
 3. **Deterministic-core guard**: implemented as an entry in the harness's
-   `validate_architecture.py` forbidden-dependency list — not as a new script.
+   `validate_architecture.py` forbidden-dependency list - not as a new script.
 4. **Harness MCP governance active** (`guard_mcp.py`, `validate_mcp_config.py`, `/review-mcp`): the
    project consumes 3 MCP servers, and MCP governance becomes part of the demo.
 5. **Python 3.13** (harness default; `a2a-sdk`, LiteLLM, and OTel support it).

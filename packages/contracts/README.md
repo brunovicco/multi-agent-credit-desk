@@ -2,7 +2,7 @@
 
 Shared, versioned Pydantic v2 schemas for the Multi-Agent Credit Desk workspace: artifact
 envelopes, structured events, and model-routing decisions. This package has no consumers yet
-(agents, orchestrator, and the model router are not implemented in this repository) — it defines
+(agents, orchestrator, and the model router are not implemented in this repository) - it defines
 the contracts they will exchange. Agent-specific artifact payload schemas are deferred until their
 producer and consumer boundaries are implemented.
 
@@ -11,12 +11,12 @@ producer and consumer boundaries are implemented.
 - Every contract rejects unknown fields (`model_config = ConfigDict(extra="forbid")`) and is
   immutable after construction (`frozen=True`).
 - Every top-level contract requires an explicit `schema_version` (currently pinned to the
-  `Literal["1.0"]` for each contract) — there is no default, so omitting it is a validation error.
+  `Literal["1.0"]` for each contract) - there is no default, so omitting it is a validation error.
 - Every timestamp field must be timezone-aware and expressed in UTC; naive or non-UTC datetimes are
   rejected.
 - `EventEnvelope` (the telemetry/audit-trail contract) carries only fixed, named fields. It has no
   free-form metadata field, and never carries prompts, model responses, customer payloads, or
-  credentials — see `docs/adr/0007-telemetry-without-sensitive-content.md`.
+  credentials - see `docs/adr/0007-telemetry-without-sensitive-content.md`.
 - `ArtifactEnvelope` references stored content through a `content_hash` and `storage_uri`; it does
   not carry the artifact payload itself.
 - All identifiers (`WorkflowId`, `TaskId`, etc.) are distinct, non-empty string types. At runtime,
