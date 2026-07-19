@@ -412,8 +412,8 @@ Externo já existente: **`openfinance-br-mcp`** (mock, imagem no compose).
 - [ ] Forbidden-deps no `validate_architecture.py`: LLM proibido em `credit-core` + rule path-conditional correspondente
 - [x] `packages/contracts`: envelope de artifact, schema de eventos estruturados e contratos do router
 - [x] `a2a-otel-kit` (repo próprio): OTel init + structlog JSON + propagação + interceptors A2A/MCP; release 0.4.2 pinada no monorepo (sem consumidor em `services/*` ainda - ver `docs/ARCHITECTURE.md`)
-- [ ] OTel Collector com fan-out Langfuse (default) e Datadog (perfil)
-- [ ] Compose base: Langfuse stack + Collector + LiteLLM + openfinance-br-mcp
+- [x] OTel Collector com fan-out Langfuse (default) e Datadog (perfil, opt-in via `OTEL_COLLECTOR_CONFIG`) - `infra/otel/`
+- [x] Compose base: Langfuse stack + Collector (`infra/docker-compose.yml`) - LiteLLM e openfinance-br-mcp ainda pendentes, entram quando `litellm/config.yaml` e `infra/routing/workloads.yaml` existirem
 
 **Núcleo e routing:**
 - [x] `credit-core`: score, política de alçada, regras de bloqueio + testes de tabela-verdade

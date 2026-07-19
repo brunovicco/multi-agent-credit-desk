@@ -1,0 +1,38 @@
+# OTel Collector pipeline: OTLP in, Langfuse OTLP ingestion out. See ADR-0006.
+#
+# `traces_endpoint` is the complete signal-specific path Langfuse documents
+# (`/api/public/otel/v1/traces`), not a base path — the otlphttp exporter would otherwise append
+# `/v1/traces` a second time. Basic Auth is handled by the `basicauth` extension so
+# LANGFUSE_PUBLIC_KEY/LANGFUSE_SECRET_KEY never need manual base64 encoding.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+
+extensions:
+  basicauth/langfuse:
+    client_auth:
+      username: ${env:LANGFUSE_PUBLIC_KEY}
+      password: ${env:LANGFUSE_SECRET_KEY}
+
+exporters:
+  otlp_http/langfuse:
+    traces_endpoint: ${env:LANGFUSE_OTLP_ENDPOINT}
+    auth:
+      authenticator: basicauth/langfuse
+    headers:
+      x-langfuse-ingestion-version: "4"
+
+service:
+  extensions: [basicauth/langfuse]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp_http/langfuse]

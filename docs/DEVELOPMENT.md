@@ -38,6 +38,44 @@ with a real `services/*` entrypoint once one exists.
 
 Copy `.env.example` only when the application supports local dotenv loading. Never commit `.env` or real credentials.
 
+## Local observability stack
+
+`infra/docker-compose.yml` stands up the OTel Collector plus a self-hosted Langfuse v3 stack
+(Postgres, ClickHouse, MinIO, Redis, Langfuse worker/web), per ADR-0006. Every credential in it is
+a fixed, local-only demo default from `.env.example` - never real secrets, never meant to leave a
+local machine.
+
+```bash
+docker compose -f infra/docker-compose.yml up -d
+docker compose -f infra/docker-compose.yml ps   # wait until every service is healthy
+```
+
+Langfuse UI: http://localhost:3000, login `demo@credit-desk.local` / `demo-password-local-dev`
+(from `.env.example`'s `LANGFUSE_INIT_USER_*`, auto-provisioned on first boot - no manual setup).
+
+Datadog fan-out is opt-in (ADR-0006): set `OTEL_COLLECTOR_CONFIG=collector.datadog.yaml` plus
+`DD_API_KEY`/`DD_SITE` before starting the stack.
+
+Run the infrastructure-dependent test once the stack is healthy:
+
+```bash
+uv run pytest -m integration --no-cov
+```
+
+`--no-cov` avoids a spurious coverage-threshold failure: the repo's coverage gate (80%) is
+calibrated for the full suite, and running only this one test naturally covers a small fraction of
+`packages/*`. This test is excluded from the default `uv run pytest` (part of the quality gate) via
+the `not integration` marker filter, so the gate never requires the compose stack to be running.
+
+Tear down, including volumes:
+
+```bash
+docker compose -f infra/docker-compose.yml down -v
+```
+
+LiteLLM and `openfinance-br-mcp` are not part of this compose file yet - they land in a future step
+once `litellm/config.yaml` and `infra/routing/workloads.yaml` have real content.
+
 ## Claude Code
 
 - Run `/memory` to confirm loaded instructions.
