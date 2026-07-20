@@ -40,10 +40,10 @@ Copy `.env.example` only when the application supports local dotenv loading. Nev
 
 ## Local infra stack
 
-`infra/docker-compose.yml` stands up `policy-model-router` (ADR-0003/0004) plus the OTel Collector
-and a self-hosted Langfuse v3 stack (Postgres, ClickHouse, MinIO, Redis, Langfuse worker/web), per
-ADR-0006. Every credential in it is a fixed, local-only demo default from `.env.example` - never
-real secrets, never meant to leave a local machine.
+`infra/docker-compose.yml` stands up `policy-model-router` (ADR-0003/0004), a LiteLLM proxy
+(ADR-0004), and the OTel Collector plus a self-hosted Langfuse v3 stack (Postgres, ClickHouse,
+MinIO, Redis, Langfuse worker/web), per ADR-0006. Every credential in it is a fixed, local-only
+demo default from `.env.example` - never real secrets, never meant to leave a local machine.
 
 ```bash
 docker compose -f infra/docker-compose.yml up -d
@@ -79,10 +79,18 @@ Tear down, including volumes:
 docker compose -f infra/docker-compose.yml down -v
 ```
 
-LiteLLM and `openfinance-br-mcp` are not part of this compose file yet - they land in a future step
-once `litellm/config.yaml` has real content. (The workload -> model group routing table lives in
-`policy-model-router`'s own repo as `config/routing_policy.yaml`, not in this monorepo - see
-ADR-0003.)
+LiteLLM answers OpenAI-compatible completions at http://localhost:4000, proxying the 4 model groups
+defined in `infra/litellm/config.yaml` (`fast-small`, `fast-structured-output`, `reasoning-medium`,
+`reasoning-strong` - matches `credit_desk_contracts.enums.ModelGroup`, enforced by
+`tests/unit/test_litellm_config.py`) to Groq and Anthropic. Set `GROQ_API_KEY`/`ANTHROPIC_API_KEY`
+locally to make completions actually work; without them the proxy still starts and answers
+`/health/liveliness`. No local vLLM deployment exists yet - this compose file does not stand up a
+vLLM service, so the confidential-data local path from the blueprint is not built yet.
+`openfinance-br-mcp` is still not part of this compose file.
+
+(The workload -> model group routing table itself lives in `policy-model-router`'s own repo as
+`config/routing_policy.yaml`, not in this monorepo - see ADR-0003. `infra/litellm/config.yaml` only
+handles provider routing *within* an already-selected group, per ADR-0004.)
 
 ## Claude Code
 

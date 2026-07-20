@@ -26,10 +26,12 @@ so today it is only proven to install and initialize correctly, the same way `cr
 `tests/unit/test_a2a_otel_kit_pin.py`).
 
 `infra/docker-compose.yml` stands up `policy-model-router` (ADR-0003/0004 - a generic image
-published from its own repo, github.com/brunovicco/policy-model-router, not built here) alongside
-the OTel Collector + a self-hosted Langfuse stack (ADR-0006), fanning traces out to Langfuse by
-default and to Datadog opt-in. See "Local observability stack" in `docs/DEVELOPMENT.md`. LiteLLM
-and `openfinance-br-mcp` are not wired into the compose yet.
+published from its own repo, github.com/brunovicco/policy-model-router, not built here), a LiteLLM
+proxy (ADR-0004 - provider routing for the 4 model groups in `infra/litellm/config.yaml`, matching
+`credit_desk_contracts.enums.ModelGroup`), and the OTel Collector + a self-hosted Langfuse stack
+(ADR-0006), fanning traces out to Langfuse by default and to Datadog opt-in. See "Local
+observability stack" in `docs/DEVELOPMENT.md`. `openfinance-br-mcp` is not wired into the compose
+yet.
 
 ```text
 multi-agent-credit-desk/
