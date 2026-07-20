@@ -1,5 +1,6 @@
-# Local observability stack (ADR-0006): OTel Collector -> self-hosted Langfuse (always on).
-# Datadog fan-out is opt-in: set OTEL_COLLECTOR_CONFIG=collector.datadog.yaml plus DD_API_KEY/DD_SITE.
+# Infra stack: the policy-model-router service (ADR-0003/0004) plus the local observability
+# stack (ADR-0006: OTel Collector -> self-hosted Langfuse, always on). Datadog fan-out is opt-in:
+# set OTEL_COLLECTOR_CONFIG=collector.datadog.yaml plus DD_API_KEY/DD_SITE.
 #
 # Every credential-shaped value below has a fixed, local-only default in .env.example. This is a
 # synthetic-data demo stack (see README.md) — these are not production secrets and must never be
@@ -12,6 +13,37 @@
 #   docker compose -f infra/docker-compose.yml down -v   # tear down, including volumes
 
 services:
+  # Model-routing infrastructure (ADR-0003/0004): a generic, standalone image published from
+  # github.com/brunovicco/policy-model-router, not part of this workspace. Agents call
+  # POST /route on it before every LLM call; LiteLLM (not wired into this compose yet) handles
+  # provider/deployment selection within the model group it returns.
+  policy-model-router:
+    image: ghcr.io/brunovicco/policy-model-router:${POLICY_MODEL_ROUTER_VERSION:-0.1.0}
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${POLICY_MODEL_ROUTER_APP_ENV:-development}
+      LOG_LEVEL: ${POLICY_MODEL_ROUTER_LOG_LEVEL:-INFO}
+      LOG_FORMAT: ${POLICY_MODEL_ROUTER_LOG_FORMAT:-json}
+    ports:
+      - "127.0.0.1:8081:8000"
+    healthcheck:
+      test:
+        - "CMD"
+        - "python3"
+        - "-c"
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/openapi.json', timeout=2)"
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 2s
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
+
   collector:
     image: otel/opentelemetry-collector-contrib:0.153.0@sha256:93aad750175cbf1a973ae1c5886c3371f4d800f61be25cdd26870b8441ffe9fa
     restart: unless-stopped

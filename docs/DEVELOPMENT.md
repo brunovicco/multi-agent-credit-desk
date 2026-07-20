@@ -38,17 +38,23 @@ with a real `services/*` entrypoint once one exists.
 
 Copy `.env.example` only when the application supports local dotenv loading. Never commit `.env` or real credentials.
 
-## Local observability stack
+## Local infra stack
 
-`infra/docker-compose.yml` stands up the OTel Collector plus a self-hosted Langfuse v3 stack
-(Postgres, ClickHouse, MinIO, Redis, Langfuse worker/web), per ADR-0006. Every credential in it is
-a fixed, local-only demo default from `.env.example` - never real secrets, never meant to leave a
-local machine.
+`infra/docker-compose.yml` stands up `policy-model-router` (ADR-0003/0004) plus the OTel Collector
+and a self-hosted Langfuse v3 stack (Postgres, ClickHouse, MinIO, Redis, Langfuse worker/web), per
+ADR-0006. Every credential in it is a fixed, local-only demo default from `.env.example` - never
+real secrets, never meant to leave a local machine.
 
 ```bash
 docker compose -f infra/docker-compose.yml up -d
 docker compose -f infra/docker-compose.yml ps   # wait until every service is healthy
 ```
+
+`policy-model-router` is a generic image published from its own repo
+(github.com/brunovicco/policy-model-router) - this monorepo only references it, per the
+extraction criterion in ADR-0003. It answers `POST /route` at http://localhost:8081 (mapped from
+its container port 8000); pin the image with `POLICY_MODEL_ROUTER_VERSION` in `.env.example` when
+bumping to a newer released tag.
 
 Langfuse UI: http://localhost:3000, login `demo@credit-desk.local` / `demo-password-local-dev`
 (from `.env.example`'s `LANGFUSE_INIT_USER_*`, auto-provisioned on first boot - no manual setup).
@@ -74,7 +80,9 @@ docker compose -f infra/docker-compose.yml down -v
 ```
 
 LiteLLM and `openfinance-br-mcp` are not part of this compose file yet - they land in a future step
-once `litellm/config.yaml` and `infra/routing/workloads.yaml` have real content.
+once `litellm/config.yaml` has real content. (The workload -> model group routing table lives in
+`policy-model-router`'s own repo as `config/routing_policy.yaml`, not in this monorepo - see
+ADR-0003.)
 
 ## Claude Code
 
