@@ -36,6 +36,8 @@ src = [
     "packages/credit-core/tests",
     "services/policy-mcp/src",
     "services/policy-mcp/tests",
+    "services/bureau-mcp/src",
+    "services/bureau-mcp/tests",
     "tests",
 ]
 
@@ -80,15 +82,15 @@ warn_unused_configs = true
 warn_unused_ignores = true
 show_error_codes = true
 pretty = true
-mypy_path = "packages/contracts/src:packages/credit-core/src:services/policy-mcp/src"
+mypy_path = "packages/contracts/src:packages/credit-core/src:services/policy-mcp/src:services/bureau-mcp/src"
 
 [[tool.mypy.overrides]]
 module = ["tests.*"]
 disallow_untyped_decorators = false
 
 [tool.pytest.ini_options]
-addopts = "--strict-config --strict-markers -m 'not integration' --cov=packages/contracts/src/credit_desk_contracts --cov=packages/credit-core/src/credit_core --cov=services/policy-mcp/src/policy_mcp --cov-report=term-missing"
-testpaths = ["tests", "packages/contracts/tests", "packages/credit-core/tests", "services/policy-mcp/tests"]
+addopts = "--strict-config --strict-markers -m 'not integration' --cov=packages/contracts/src/credit_desk_contracts --cov=packages/credit-core/src/credit_core --cov=services/policy-mcp/src/policy_mcp --cov=services/bureau-mcp/src/bureau_mcp --cov-report=term-missing"
+testpaths = ["tests", "packages/contracts/tests", "packages/credit-core/tests", "services/policy-mcp/tests", "services/bureau-mcp/tests"]
 markers = [
     "integration: tests that require real infrastructure",
     "contract: tests that verify an interface contract",
@@ -101,6 +103,7 @@ source = [
     "packages/contracts/src/credit_desk_contracts",
     "packages/credit-core/src/credit_core",
     "services/policy-mcp/src/policy_mcp",
+    "services/bureau-mcp/src/bureau_mcp",
 ]
 
 [tool.coverage.report]
@@ -114,5 +117,6 @@ exclude_dirs = [
     "packages/contracts/tests",
     "packages/credit-core/tests",
     "services/policy-mcp/tests",
+    "services/bureau-mcp/tests",
 ]
 skips = []

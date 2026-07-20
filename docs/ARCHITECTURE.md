@@ -18,6 +18,7 @@ code and is not itself installed. The workspace members are:
 | `packages/contracts` | `credit_desk_contracts` | Versioned Pydantic v2 schemas for artifact envelopes, structured events, and model-routing decisions. Agent-specific artifact payload schemas are deferred. See `packages/contracts/README.md`. |
 | `packages/credit-core` | `credit_core` | Deterministic credit scoring and policy core. Implemented behind a synthetic demo policy - see `packages/credit-core/README.md`. |
 | `services/policy-mcp` | `policy_mcp` | Read-only MCP server exposing a versioned catalog of the credit policy `credit_core` enforces. The workspace's first `services/*` package - see `services/policy-mcp/README.md`. |
+| `services/bureau-mcp` | `bureau_mcp` | Read-only MCP server exposing a synthetic credit-bureau report catalog (external score, negative records), keyed by CNPJ. No real credit-bureau connection exists or is planned - see `services/bureau-mcp/README.md`. |
 
 `credit_core` may import only the standard library and itself; every third-party or other
 workspace import is rejected by default, and dynamic import mechanisms (`importlib`, `__import__`)
@@ -32,26 +33,34 @@ by a test that fails if any other layer imports `credit_core` - see
 `docs/adr/0011-policy-mcp-sources-credit-core-policy-directly.md`. `credit_core` itself stays
 completely unaware of `policy-mcp` or any other consumer.
 
+`services/bureau-mcp` has no equivalent system of record to depend on: no real credit-bureau
+connection exists or is planned (see `docs/adr/0009-reuse-existing-mcp-servers.md`). Its adapter,
+`bureau_mcp.adapters.synthetic_bureau_source.SyntheticBureauSource`, *is* the system of record - a
+fixed, in-memory dataset of three demo personas - so `bureau-mcp` has no external workspace
+dependency at all beyond `mcp` and `pydantic`.
+
 `a2a-otel-kit==0.4.2` (https://github.com/brunovicco/a2a-otel-kit) is pinned in the root
 `pyproject.toml` `[project.dependencies]` per ADR-0003 - a virtual project's dependencies are
 still installed even though `tool.uv.package = false` means the root package itself is never
 built. It still has no consumer: `credit_core` forbids third-party imports by design and
-`contracts` is schema-only, so neither is a legitimate consumer, and `services/policy-mcp` is an
-MCP server, not an A2A agent, so it doesn't use it either. Until an A2A agent exists,
+`contracts` is schema-only, so neither is a legitimate consumer, and `services/policy-mcp` and
+`services/bureau-mcp` are MCP servers, not A2A agents, so neither uses it either. Until an A2A
+agent exists,
 `tests/unit/test_a2a_otel_kit_pin.py` and the workspace-validation `Dockerfile` image are the only
 proof that the pin resolves and its public API (`Observability`, `ObservabilitySettings`) behaves
 as documented.
 
-Application entrypoints for agents and the orchestrator do not exist yet. `services/policy-mcp` is
-the first `services/*` package, but it is a standalone MCP server with no A2A surface - agents and
-the orchestrator remain future `services/*` packages.
+Application entrypoints for agents and the orchestrator do not exist yet. `services/policy-mcp`
+and `services/bureau-mcp` are standalone MCP servers with no A2A surface - agents and the
+orchestrator remain future `services/*` packages.
 
 ## Layers
 
 The layered Clean Architecture pattern below is instantiated by `services/policy-mcp` - the
-workspace's first `services/*` package - and is the required pattern for every `services/*`
-package built after it. `scripts/validate_architecture.py` already discovers and enforces it under
-any `services/*/src/` root (see `.claude/rules/architecture.md`).
+workspace's first `services/*` package, followed by `services/bureau-mcp` - and is the required
+pattern for every `services/*` package built after them. `scripts/validate_architecture.py`
+already discovers and enforces it under any `services/*/src/` root (see
+`.claude/rules/architecture.md`).
 
 ```text
 services/<name>/src/<name>/

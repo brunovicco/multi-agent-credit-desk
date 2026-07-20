@@ -8,14 +8,17 @@
   (`tool.uv.package = false`) with no application code and no source tree of its own. Workspace
   packages: `packages/contracts` (import `credit_desk_contracts`), `packages/credit-core` (import
   `credit_core`, deterministic, zero third-party/dynamic imports - enforced by
-  `scripts/validate_architecture.py`), and `services/policy-mcp` (import `policy_mcp`, the
-  workspace's first `services/*` package: a read-only MCP server exposing a versioned catalog of
-  the `credit_core` policy, following the Clean Architecture layout below). Future application
+  `scripts/validate_architecture.py`), `services/policy-mcp` (import `policy_mcp`, the workspace's
+  first `services/*` package: a read-only MCP server exposing a versioned catalog of the
+  `credit_core` policy, following the Clean Architecture layout below), and `services/bureau-mcp`
+  (import `bureau_mcp`, a read-only MCP server exposing a synthetic credit-bureau report catalog -
+  no real credit-bureau connection exists or is planned, so its adapter is its own fixed dataset
+  rather than a translation of another package, unlike `policy-mcp`). Future application
   entrypoints (agents, orchestrator) belong under `services/` as further packages, not in a root
   application package.
 - Tests: pytest
-- Architecture: Clean Architecture, instantiated by `services/policy-mcp`; see
-  `docs/ARCHITECTURE.md`
+- Architecture: Clean Architecture, instantiated by `services/policy-mcp` and `services/bureau-mcp`;
+  see `docs/ARCHITECTURE.md`
 - Container: `Dockerfile` currently builds a workspace-validation image only (imports `credit_core`
   and `credit_desk_contracts`); it is not an application runtime image. Replace its `CMD` with a
   real `services/*` entrypoint when one exists.

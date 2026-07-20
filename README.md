@@ -9,7 +9,7 @@ Finance, BCB, or credit bureau connection exists or is planned to exist without 
 separately reviewed integration. See `docs/adr/0009-reuse-existing-mcp-servers.md` for the
 transparency policy on the mock Open Finance MCP server.
 
-## Current state: Milestone 4 - policy-mcp catalog
+## Current state: Milestone 5 - bureau-mcp catalog
 
 `packages/contracts` provides versioned Pydantic v2 schemas for artifact envelopes, structured
 events, and model-routing decisions (see `packages/contracts/README.md`). Agent-specific artifact
@@ -24,12 +24,22 @@ blocking rules, approval-authority policy) behind a synthetic demo policy - see
 reading `credit_core.policy.DEMO_POLICY_V1` and `credit_core.domain.CriticalFlag` directly so the
 catalog can never drift from what `credit_core` actually applies - see
 `services/policy-mcp/README.md` and `docs/adr/0011-policy-mcp-sources-credit-core-policy-directly.md`.
-No agent consumes it yet (`risco-agent`/`decisao-agent` are not implemented in this repository);
-it is built and tested standalone. No orchestrator is implemented yet either.
+
+`services/bureau-mcp` is the second `services/*` package: a small, read-only MCP server
+(`import bureau_mcp`) that exposes a synthetic credit-bureau report (external score, negative
+records) for a fixed set of demo companies, keyed by CNPJ. Unlike `policy-mcp`, it has no real
+system of record to read from - no real credit-bureau connection exists or is planned - so its
+adapter *is* the system of record: a fixed, in-memory dataset of the three demo personas from
+`docs/architecture-blueprint.md` - see `services/bureau-mcp/README.md` and
+`docs/adr/0009-reuse-existing-mcp-servers.md`.
+
+No agent consumes either MCP server yet (`cadastral-agent`/`risco-agent`/`decisao-agent` are not
+implemented in this repository); both are built and tested standalone. No orchestrator is
+implemented yet either.
 
 `a2a-otel-kit==0.4.2` (https://github.com/brunovicco/a2a-otel-kit) is pinned as a root workspace
-dependency per ADR-0003. It still has no consumer - `policy-mcp` is an MCP server, not an A2A
-agent, so it does not use it either - so today it is only proven to install and initialize
+dependency per ADR-0003. It still has no consumer - `policy-mcp` and `bureau-mcp` are MCP servers,
+not A2A agents, so neither uses it - so today it is only proven to install and initialize
 correctly, the same way `credit_core` and `credit_desk_contracts` are proven in the
 workspace-validation `Dockerfile` image (see `tests/unit/test_a2a_otel_kit_pin.py`).
 
@@ -47,15 +57,16 @@ multi-agent-credit-desk/
 │   ├── contracts/      # import: credit_desk_contracts - envelope/event/routing schemas
 │   └── credit-core/     # import: credit_core - deterministic scoring/policy core (implemented)
 ├── services/
-│   └── policy-mcp/      # import: policy_mcp - read-only MCP server, credit_core policy catalog
+│   ├── policy-mcp/      # import: policy_mcp - read-only MCP server, credit_core policy catalog
+│   └── bureau-mcp/      # import: bureau_mcp - read-only MCP server, synthetic bureau report catalog
 ├── docs/adr/            # canonical architecture decisions (0001, 0002-0011)
 └── pyproject.toml       # virtual workspace coordinator (tool.uv.package = false); no application code
 ```
 
 The root `pyproject.toml` is a **virtual workspace coordinator** - it holds no application code and
 is not itself installed. Future application entrypoints (agents, orchestrator) belong under
-`services/`, alongside `policy-mcp`. See `docs/ARCHITECTURE.md` and `docs/architecture-blueprint.md`
-for the full plan.
+`services/`, alongside `policy-mcp` and `bureau-mcp`. See `docs/ARCHITECTURE.md` and
+`docs/architecture-blueprint.md` for the full plan.
 
 `packages/credit-core` enforces a default-deny import policy (standard library and self only, no
 LLM/A2A/MCP/HTTP/dynamic imports) via `scripts/validate_architecture.py` - see
