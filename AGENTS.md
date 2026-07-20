@@ -6,13 +6,16 @@
 - Dependency manager: uv
 - Layout: uv workspace. Root `pyproject.toml` is a **virtual coordinator**
   (`tool.uv.package = false`) with no application code and no source tree of its own. Workspace
-  packages: `packages/contracts` (import `credit_desk_contracts`) and `packages/credit-core`
-  (import `credit_core`, deterministic, zero third-party/dynamic imports - enforced by
-  `scripts/validate_architecture.py`). Future application entrypoints belong under `services/`
-  (not yet created), not in a root application package.
+  packages: `packages/contracts` (import `credit_desk_contracts`), `packages/credit-core` (import
+  `credit_core`, deterministic, zero third-party/dynamic imports - enforced by
+  `scripts/validate_architecture.py`), and `services/policy-mcp` (import `policy_mcp`, the
+  workspace's first `services/*` package: a read-only MCP server exposing a versioned catalog of
+  the `credit_core` policy, following the Clean Architecture layout below). Future application
+  entrypoints (agents, orchestrator) belong under `services/` as further packages, not in a root
+  application package.
 - Tests: pytest
-- Architecture: Clean Architecture (applies to `services/*` packages once they exist; see
-  `docs/ARCHITECTURE.md`)
+- Architecture: Clean Architecture, instantiated by `services/policy-mcp`; see
+  `docs/ARCHITECTURE.md`
 - Container: `Dockerfile` currently builds a workspace-validation image only (imports `credit_core`
   and `credit_desk_contracts`); it is not an application runtime image. Replace its `CMD` with a
   real `services/*` entrypoint when one exists.
@@ -27,9 +30,9 @@ uv run ruff check .
 uv run ruff format --check .
 uv run python scripts/validate_architecture.py
 uv run python scripts/validate_mcp_config.py
-uv run mypy packages tests
+uv run mypy packages services tests
 uv run pytest
-uv run bandit -c pyproject.toml -r packages
+uv run bandit -c pyproject.toml -r packages services
 uv run pip-audit
 ```
 

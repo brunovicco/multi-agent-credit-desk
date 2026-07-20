@@ -12,7 +12,7 @@ dependencies = [
 package = false
 
 [tool.uv.workspace]
-members = ["packages/*"]
+members = ["packages/*", "services/*"]
 
 [dependency-groups]
 dev = [
@@ -34,6 +34,8 @@ src = [
     "packages/contracts/tests",
     "packages/credit-core/src",
     "packages/credit-core/tests",
+    "services/policy-mcp/src",
+    "services/policy-mcp/tests",
     "tests",
 ]
 
@@ -60,6 +62,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["D", "S101", "ANN"]
 "packages/*/tests/**/*.py" = ["D", "S101", "ANN"]
+"services/*/tests/**/*.py" = ["D", "S101", "ANN"]
 "scripts/**/*.py" = ["D"]
 
 [tool.ruff.lint.pydocstyle]
@@ -77,15 +80,15 @@ warn_unused_configs = true
 warn_unused_ignores = true
 show_error_codes = true
 pretty = true
-mypy_path = "packages/contracts/src:packages/credit-core/src"
+mypy_path = "packages/contracts/src:packages/credit-core/src:services/policy-mcp/src"
 
 [[tool.mypy.overrides]]
 module = ["tests.*"]
 disallow_untyped_decorators = false
 
 [tool.pytest.ini_options]
-addopts = "--strict-config --strict-markers -m 'not integration' --cov=packages/contracts/src/credit_desk_contracts --cov=packages/credit-core/src/credit_core --cov-report=term-missing"
-testpaths = ["tests", "packages/contracts/tests", "packages/credit-core/tests"]
+addopts = "--strict-config --strict-markers -m 'not integration' --cov=packages/contracts/src/credit_desk_contracts --cov=packages/credit-core/src/credit_core --cov=services/policy-mcp/src/policy_mcp --cov-report=term-missing"
+testpaths = ["tests", "packages/contracts/tests", "packages/credit-core/tests", "services/policy-mcp/tests"]
 markers = [
     "integration: tests that require real infrastructure",
     "contract: tests that verify an interface contract",
@@ -94,7 +97,11 @@ markers = [
 
 [tool.coverage.run]
 branch = true
-source = ["packages/contracts/src/credit_desk_contracts", "packages/credit-core/src/credit_core"]
+source = [
+    "packages/contracts/src/credit_desk_contracts",
+    "packages/credit-core/src/credit_core",
+    "services/policy-mcp/src/policy_mcp",
+]
 
 [tool.coverage.report]
 show_missing = true
@@ -102,5 +109,10 @@ skip_covered = true
 fail_under = 80
 
 [tool.bandit]
-exclude_dirs = ["tests", "packages/contracts/tests", "packages/credit-core/tests"]
+exclude_dirs = [
+    "tests",
+    "packages/contracts/tests",
+    "packages/credit-core/tests",
+    "services/policy-mcp/tests",
+]
 skips = []
