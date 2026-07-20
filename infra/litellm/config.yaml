@@ -1,0 +1,58 @@
+# LiteLLM proxy config: provider routing *within* a model group already selected by
+# policy-model-router (ADR-0004 - "Provider routing" row). The 4 model_name entries below match
+# credit_desk_contracts.enums.ModelGroup exactly; tests/unit/test_litellm_config.py enforces that
+# as a contract test so the two never drift.
+#
+# Every api_key is an env-var reference (os.environ/VAR_NAME), never a literal value - see
+# .env.example for GROQ_API_KEY/ANTHROPIC_API_KEY. Without real values the proxy still starts and
+# answers /health/liveliness; completions fail. That is expected for a synthetic demo stack that
+# ships no provider credentials.
+#
+# fast-structured-output is an alias (blueprint 2.3): the same Groq deployment as fast-small,
+# selected by policy-model-router when structured_output_required is true.
+#
+# No local vLLM deployment exists yet - infra/docker-compose.yml does not stand up a vLLM service.
+# Add one here (and in that compose file) when the confidential-data local path is actually built.
+
+model_list:
+  - model_name: fast-small
+    litellm_params:
+      model: groq/llama-3.1-8b-instant
+      api_key: os.environ/GROQ_API_KEY
+      timeout: 30
+
+  - model_name: fast-structured-output
+    litellm_params:
+      model: groq/llama-3.1-8b-instant
+      api_key: os.environ/GROQ_API_KEY
+      timeout: 30
+
+  - model_name: reasoning-medium
+    litellm_params:
+      model: anthropic/claude-haiku-4-5-20251001
+      api_key: os.environ/ANTHROPIC_API_KEY
+      timeout: 60
+
+  - model_name: reasoning-strong
+    litellm_params:
+      model: anthropic/claude-sonnet-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+      timeout: 60
+
+litellm_settings:
+  drop_params: true
+  # Native LiteLLM -> Langfuse callback (ADR-0006): complements the OTel Collector fan-out with
+  # per-call cost/token data. Reads LANGFUSE_PUBLIC_KEY/LANGFUSE_SECRET_KEY/LANGFUSE_HOST from the
+  # environment (see infra/docker-compose.yml's litellm service and .env.example).
+  success_callback: ["langfuse"]
+
+router_settings:
+  num_retries: 2
+  allowed_fails: 2
+  cooldown_time: 30
+  # No cross-group fallbacks are configured. ADR-0004 reserves fallback for *within* an
+  # already-authorized model group - falling back across groups here could silently reintroduce a
+  # provider or data-classification constraint that policy-model-router already eliminated.
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

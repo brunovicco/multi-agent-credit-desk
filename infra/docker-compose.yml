@@ -1,6 +1,7 @@
-# Infra stack: the policy-model-router service (ADR-0003/0004) plus the local observability
-# stack (ADR-0006: OTel Collector -> self-hosted Langfuse, always on). Datadog fan-out is opt-in:
-# set OTEL_COLLECTOR_CONFIG=collector.datadog.yaml plus DD_API_KEY/DD_SITE.
+# Infra stack: the policy-model-router service (ADR-0003/0004), a LiteLLM proxy for provider
+# routing within an already-selected model group (ADR-0004, infra/litellm/config.yaml), plus the
+# local observability stack (ADR-0006: OTel Collector -> self-hosted Langfuse, always on). Datadog
+# fan-out is opt-in: set OTEL_COLLECTOR_CONFIG=collector.datadog.yaml plus DD_API_KEY/DD_SITE.
 #
 # Every credential-shaped value below has a fixed, local-only default in .env.example. This is a
 # synthetic-data demo stack (see README.md) — these are not production secrets and must never be
@@ -43,6 +44,46 @@ services:
       - ALL
     tmpfs:
       - /tmp
+
+  # LiteLLM proxy (ADR-0004): OpenAI-compatible completions for the 4 model groups defined in
+  # infra/litellm/config.yaml, fronting Groq and Anthropic. GROQ_API_KEY/ANTHROPIC_API_KEY default
+  # to empty in .env.example - the proxy still boots and answers /health/liveliness without them,
+  # completions just fail until real keys are supplied locally.
+  litellm:
+    image: ghcr.io/berriai/litellm:main-v1.23.9@sha256:f1e994bd98ccccb65ff0d3e4b99ae563baf7499cb5d0ef319b78f2d3114fb3fc
+    restart: unless-stopped
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    environment:
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-litellm-master-key-local-dev}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-lf-public-local-dev}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-lf-secret-local-dev}
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-http://langfuse-web:3000}
+    ports:
+      - "127.0.0.1:4000:4000"
+    volumes:
+      - ./litellm/config.yaml:/app/config.yaml:ro
+    healthcheck:
+      test:
+        - "CMD"
+        - "python3"
+        - "-c"
+        - "import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness', timeout=2)"
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
+    depends_on:
+      langfuse-web:
+        condition: service_started
 
   collector:
     image: otel/opentelemetry-collector-contrib:0.153.0@sha256:93aad750175cbf1a973ae1c5886c3371f4d800f61be25cdd26870b8441ffe9fa
