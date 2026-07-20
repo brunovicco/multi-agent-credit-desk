@@ -86,11 +86,30 @@ defined in `infra/litellm/config.yaml` (`fast-small`, `fast-structured-output`, 
 locally to make completions actually work; without them the proxy still starts and answers
 `/health/liveliness`. No local vLLM deployment exists yet - this compose file does not stand up a
 vLLM service, so the confidential-data local path from the blueprint is not built yet.
-`openfinance-br-mcp` is still not part of this compose file.
 
 (The workload -> model group routing table itself lives in `policy-model-router`'s own repo as
 `config/routing_policy.yaml`, not in this monorepo - see ADR-0003. `infra/litellm/config.yaml` only
 handles provider routing *within* an already-selected group, per ADR-0004.)
+
+`openfinance-br-mcp` (github.com/brunovicco/openfinance-br-mcp) is deliberately **not** wired into
+this compose file yet, and it isn't a copy-paste of the `policy-model-router` pattern when it does
+land:
+
+- No published container image exists for it (unlike `policy-model-router`) - only a PyPI package
+  (`uvx openfinance-br-mcp`) and its own `Dockerfile`. Wiring it here would need a pinned git-context
+  `build:` (e.g. `https://github.com/brunovicco/openfinance-br-mcp.git#v0.2.0`), not an `image:`
+  reference.
+- Its default transport is `stdio`, meant to be spawned by an MCP client process, not run as a
+  standing daemon. It also supports `MCP_TRANSPORT=streamable-http`, but `mcp_http_host` defaults to
+  `127.0.0.1` *inside the container* - unreachable via Docker's published ports - so making it
+  reachable at all requires `MCP_HTTP_HOST=0.0.0.0`. That in turn trips the server's own fail-closed
+  config validator, which then requires either MCP client OAuth
+  (`mcp_oauth_issuer_url`/`mcp_oauth_resource_server_url`) or a non-empty `MCP_HTTP_ALLOWED_ORIGINS`
+  DNS-rebinding allowlist before the process will even start.
+
+Neither OAuth nor a real origin allowlist has an honest value today - both describe a real MCP
+client (an agent), and no `services/*` package exists yet. Wire this in once the first agent that
+actually calls it exists, so those values are real instead of placeholders.
 
 ## Claude Code
 
