@@ -132,10 +132,14 @@ requests carrying the same `ApplicationSnapshotInput` JSON document as a `TextPa
 through a protobuf `Struct` (double-precision floats), which would silently truncate `Decimal`
 precision. See `docs/adr/0013-decisao-agent-adopts-a2a-sdk.md`.
 
-Uses the "immediate response" execution pattern (a single `Message`, not a long-running `Task`
-with status updates): credit evaluation is fast and synchronous, with no genuine work phases to
-report. `cancel()` always raises `UnsupportedOperationError`, since no `Task` is ever created for
-a cancellation request to target.
+Uses the `Task`/`TaskUpdater` execution pattern: creates a real, store-backed `Task` per request
+and reports `TASK_STATE_WORKING` while evaluating - genuine work now that narrative drafting adds
+two network round-trips (policy-model-router, then LiteLLM) - then `TASK_STATE_COMPLETED` with the
+`CreditOpinion` JSON body as a `credit_opinion` artifact, or `TASK_STATE_FAILED` with the same
+stable JSON error envelope in the task's terminal status message. `cancel()` raises
+`UnsupportedOperationError` only for a request with no task/context ID to target; otherwise it
+publishes a cancellation through `TaskUpdater.cancel()` (a no-op if the task already reached a
+terminal state). See `docs/adr/0015-decisao-agent-migrates-to-task-taskupdater.md`.
 
 `PolicyMcpClient` (shared by both entrypoints) spawns `python -m policy_mcp` per call with a
 30-second overall timeout by default; every failure mode (bad command, crashed or hung

@@ -20,7 +20,7 @@ import httpx
 import pytest
 from a2a.client import ClientConfig, create_client
 from a2a.helpers.proto_helpers import new_text_message
-from a2a.types import SendMessageRequest
+from a2a.types import Role, SendMessageRequest, TaskState
 
 pytestmark = [pytest.mark.integration, pytest.mark.anyio]
 
@@ -89,13 +89,14 @@ async def _send(text: str) -> str:
             relative_card_path=_AGENT_CARD_PATH,
         )
         try:
-            message = new_text_message(text, media_type="application/json")
+            message = new_text_message(text, media_type="application/json", role=Role.ROLE_USER)
             request = SendMessageRequest(message=message)
-            response_text = ""
+            task = None
             async for response in client.send_message(request):
-                for part in response.message.parts:
-                    response_text += part.text
-            return response_text
+                task = response.task
+            assert task is not None
+            assert task.status.state == TaskState.TASK_STATE_COMPLETED
+            return "".join(part.text for part in task.artifacts[0].parts)
         finally:
             await client.close()
 
