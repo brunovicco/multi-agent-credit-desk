@@ -5,8 +5,9 @@ negative records) for a fixed set of demo companies. It answers "what does the b
 this CNPJ" for any MCP-capable client; it does not evaluate applications and does not mutate
 anything - see `docs/adr/0009-reuse-existing-mcp-servers.md`.
 
-No agent consumes this server yet (`cadastral-agent`/`risco-agent` do not exist in this
-repository today). It is built and tested standalone, the same way `services/policy-mcp` was.
+`services/cadastral-agent` now consumes this server over the real MCP protocol to screen a
+company's KYC standing - see `services/cadastral-agent/README.md`. `risco-agent` does not exist
+in this repository yet.
 
 ## Why its data is synthetic and fixed
 
