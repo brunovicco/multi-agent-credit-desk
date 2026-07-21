@@ -19,7 +19,7 @@ code and is not itself installed. The workspace members are:
 | `packages/credit-core` | `credit_core` | Deterministic credit scoring and policy core. Implemented behind a synthetic demo policy - see `packages/credit-core/README.md`. |
 | `services/policy-mcp` | `policy_mcp` | Read-only MCP server exposing a versioned catalog of the credit policy `credit_core` enforces. The workspace's first `services/*` package - see `services/policy-mcp/README.md`. |
 | `services/bureau-mcp` | `bureau_mcp` | Read-only MCP server exposing a synthetic credit-bureau report catalog (external score, negative records), keyed by CNPJ. No real credit-bureau connection exists or is planned - see `services/bureau-mcp/README.md`. |
-| `services/decisao-agent` | `decisao_agent` | Executes `credit_core.evaluation` directly and cross-checks the result against `policy-mcp`'s catalog over the real MCP protocol. A batch CLI only as of this milestone, not yet an A2A agent - see `services/decisao-agent/README.md`. |
+| `services/decisao-agent` | `decisao_agent` | Executes `credit_core.evaluation` directly and cross-checks the result against `policy-mcp`'s catalog over the real MCP protocol. The workspace's first real A2A agent, exposed both as a batch CLI and an A2A server over `a2a-sdk` - see `services/decisao-agent/README.md`. |
 
 `credit_core` may import only the standard library and itself; every third-party or other
 workspace import is rejected by default, and dynamic import mechanisms (`importlib`, `__import__`)
@@ -47,22 +47,28 @@ module that imports `credit_core`, mirroring `policy-mcp`'s boundary, and
 protocol - decisao-agent's first real MCP *client*, as opposed to the MCP *servers* built before
 it. See `docs/adr/0012-decisao-agent-sources-credit-core-evaluation-directly.md`.
 
+`services/decisao-agent` also depends on `a2a-sdk` (`a2a-sdk[http-server]`, pinned in
+`services/decisao-agent/pyproject.toml`, not at the root - each `services/*` package that
+implements an A2A surface declares this dependency itself, the same way each MCP-consuming
+package declares `mcp` itself rather than pinning it at the root). Its A2A composition root
+(`decisao_agent.entrypoints.a2a_server`) is a second, separate entrypoint alongside the batch CLI
+- both call the same `EvaluateCreditApplicationUseCase`. See
+`docs/adr/0013-decisao-agent-adopts-a2a-sdk.md`.
+
 `a2a-otel-kit==0.4.2` (https://github.com/brunovicco/a2a-otel-kit) is pinned in the root
 `pyproject.toml` `[project.dependencies]` per ADR-0003 - a virtual project's dependencies are
 still installed even though `tool.uv.package = false` means the root package itself is never
 built. It still has no consumer: `credit_core` forbids third-party imports by design and
-`contracts` is schema-only, so neither is a legitimate consumer, and `services/policy-mcp`,
-`services/bureau-mcp`, and `services/decisao-agent` are not A2A agents, so none of them use it
-either - no A2A protocol SDK is pinned anywhere in this workspace yet, and adding one is deferred
-to a follow-up milestone per ADR-0012. Until an A2A agent exists,
-`tests/unit/test_a2a_otel_kit_pin.py` and the workspace-validation `Dockerfile` image are the only
-proof that the pin resolves and its public API (`Observability`, `ObservabilitySettings`) behaves
-as documented.
+`contracts` is schema-only, so neither is a legitimate consumer, and `services/decisao-agent`'s
+new A2A surface uses `a2a-sdk` directly without yet wiring `a2a-otel-kit`'s `Observability`
+around it. `tests/unit/test_a2a_otel_kit_pin.py` and the workspace-validation `Dockerfile` image
+remain the only proof that the pin resolves and its public API (`Observability`,
+`ObservabilitySettings`) behaves as documented.
 
-Application entrypoints for agents and the orchestrator do not exist yet. `services/policy-mcp`
-and `services/bureau-mcp` are standalone MCP servers with no A2A surface, and
-`services/decisao-agent` is a standalone CLI with no A2A surface either - agents and the
-orchestrator remain future `services/*` packages.
+Application entrypoints for the orchestrator do not exist yet. `services/policy-mcp` and
+`services/bureau-mcp` remain standalone MCP servers with no A2A surface. `services/decisao-agent`
+is the first `services/*` package with a real A2A surface, but no orchestrator discovers or calls
+it yet - the orchestrator remains a future `services/*` package.
 
 ## Layers
 
