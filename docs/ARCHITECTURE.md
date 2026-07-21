@@ -19,6 +19,7 @@ code and is not itself installed. The workspace members are:
 | `packages/credit-core` | `credit_core` | Deterministic credit scoring and policy core. Implemented behind a synthetic demo policy - see `packages/credit-core/README.md`. |
 | `services/policy-mcp` | `policy_mcp` | Read-only MCP server exposing a versioned catalog of the credit policy `credit_core` enforces. The workspace's first `services/*` package - see `services/policy-mcp/README.md`. |
 | `services/bureau-mcp` | `bureau_mcp` | Read-only MCP server exposing a synthetic credit-bureau report catalog (external score, negative records), keyed by CNPJ. No real credit-bureau connection exists or is planned - see `services/bureau-mcp/README.md`. |
+| `services/decisao-agent` | `decisao_agent` | Executes `credit_core.evaluation` directly and cross-checks the result against `policy-mcp`'s catalog over the real MCP protocol. A batch CLI only as of this milestone, not yet an A2A agent - see `services/decisao-agent/README.md`. |
 
 `credit_core` may import only the standard library and itself; every third-party or other
 workspace import is rejected by default, and dynamic import mechanisms (`importlib`, `__import__`)
@@ -39,28 +40,37 @@ connection exists or is planned (see `docs/adr/0009-reuse-existing-mcp-servers.m
 fixed, in-memory dataset of three demo personas - so `bureau-mcp` has no external workspace
 dependency at all beyond `mcp` and `pydantic`.
 
+`services/decisao-agent` depends one-directionally on both `credit_core` and `policy-mcp` -
+`decisao_agent.adapters.credit_core_evaluation_adapter.CreditCoreEvaluationAdapter` is the only
+module that imports `credit_core`, mirroring `policy-mcp`'s boundary, and
+`decisao_agent.adapters.policy_mcp_client.PolicyMcpClient` is the only module that speaks the MCP
+protocol - decisao-agent's first real MCP *client*, as opposed to the MCP *servers* built before
+it. See `docs/adr/0012-decisao-agent-sources-credit-core-evaluation-directly.md`.
+
 `a2a-otel-kit==0.4.2` (https://github.com/brunovicco/a2a-otel-kit) is pinned in the root
 `pyproject.toml` `[project.dependencies]` per ADR-0003 - a virtual project's dependencies are
 still installed even though `tool.uv.package = false` means the root package itself is never
 built. It still has no consumer: `credit_core` forbids third-party imports by design and
-`contracts` is schema-only, so neither is a legitimate consumer, and `services/policy-mcp` and
-`services/bureau-mcp` are MCP servers, not A2A agents, so neither uses it either. Until an A2A
-agent exists,
+`contracts` is schema-only, so neither is a legitimate consumer, and `services/policy-mcp`,
+`services/bureau-mcp`, and `services/decisao-agent` are not A2A agents, so none of them use it
+either - no A2A protocol SDK is pinned anywhere in this workspace yet, and adding one is deferred
+to a follow-up milestone per ADR-0012. Until an A2A agent exists,
 `tests/unit/test_a2a_otel_kit_pin.py` and the workspace-validation `Dockerfile` image are the only
 proof that the pin resolves and its public API (`Observability`, `ObservabilitySettings`) behaves
 as documented.
 
 Application entrypoints for agents and the orchestrator do not exist yet. `services/policy-mcp`
-and `services/bureau-mcp` are standalone MCP servers with no A2A surface - agents and the
+and `services/bureau-mcp` are standalone MCP servers with no A2A surface, and
+`services/decisao-agent` is a standalone CLI with no A2A surface either - agents and the
 orchestrator remain future `services/*` packages.
 
 ## Layers
 
 The layered Clean Architecture pattern below is instantiated by `services/policy-mcp` - the
-workspace's first `services/*` package, followed by `services/bureau-mcp` - and is the required
-pattern for every `services/*` package built after them. `scripts/validate_architecture.py`
-already discovers and enforces it under any `services/*/src/` root (see
-`.claude/rules/architecture.md`).
+workspace's first `services/*` package, followed by `services/bureau-mcp` and
+`services/decisao-agent` - and is the required pattern for every `services/*` package built after
+them. `scripts/validate_architecture.py` already discovers and enforces it under any
+`services/*/src/` root (see `.claude/rules/architecture.md`).
 
 ```text
 services/<name>/src/<name>/
