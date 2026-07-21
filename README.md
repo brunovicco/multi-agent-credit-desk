@@ -9,7 +9,7 @@ Finance, BCB, or credit bureau connection exists or is planned to exist without 
 separately reviewed integration. See `docs/adr/0009-reuse-existing-mcp-servers.md` for the
 transparency policy on the mock Open Finance MCP server.
 
-## Current state: Milestone 6b - decisao-agent A2A surface
+## Current state: Milestone 6c-i - policy-model-router/LiteLLM clients (standalone)
 
 `packages/contracts` provides versioned Pydantic v2 schemas for artifact envelopes, structured
 events, and model-routing decisions (see `packages/contracts/README.md`). Agent-specific artifact
@@ -48,6 +48,15 @@ one skill, `evaluate_credit_application`, over the official `a2a-sdk` (Linux Fou
 chosen over the independent `python-a2a` package for provenance, maintenance, and license - see
 `docs/adr/0013-decisao-agent-adopts-a2a-sdk.md`). The batch CLI (`python -m decisao_agent`) still
 exists alongside it - both entrypoints share the same use case and adapters. See
+`services/decisao-agent/README.md`.
+
+`services/decisao-agent` also ships two further standalone adapters, not wired into a use case
+yet: `ModelRouterClient` (calls `policy-model-router`'s `POST /route`, verified field-for-field
+against the real service's OpenAPI schema and live-tested against a running container) and
+`LiteLLMClient` (calls LiteLLM's OpenAI-compatible completions endpoint, unit-tested against a
+fake `httpx` transport only - no real provider API key is available in this environment, so a
+real completion has not been exercised end to end). Both exist to support a future LLM-drafted
+credit opinion (`opinion_drafting`/`json_repair` workloads); see
 `services/decisao-agent/README.md`.
 
 `a2a-otel-kit==0.4.2` (https://github.com/brunovicco/a2a-otel-kit) is pinned as a root workspace

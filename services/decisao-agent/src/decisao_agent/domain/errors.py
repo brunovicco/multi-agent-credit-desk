@@ -49,6 +49,32 @@ class PolicyCatalogUnavailableError(DecisaoAgentError):
         super().__init__(f"policy-mcp catalog unavailable: {reason}")
 
 
+class ModelRoutingUnavailableError(DecisaoAgentError):
+    """Raised when policy-model-router cannot be reached or returns an unexpected response."""
+
+    def __init__(self, reason: str) -> None:
+        """Initialize the error with why a routing decision could not be obtained.
+
+        Args:
+            reason: A short, stable, human-readable description of the failure.
+        """
+        self.reason = reason
+        super().__init__(f"policy-model-router unavailable: {reason}")
+
+
+class ChatCompletionUnavailableError(DecisaoAgentError):
+    """Raised when LiteLLM cannot be reached or returns an unexpected response."""
+
+    def __init__(self, reason: str) -> None:
+        """Initialize the error with why a chat completion could not be obtained.
+
+        Args:
+            reason: A short, stable, human-readable description of the failure.
+        """
+        self.reason = reason
+        super().__init__(f"chat completion unavailable: {reason}")
+
+
 class PolicyVersionMismatchError(DecisaoAgentError):
     """Raised when credit_core applies a policy version policy-mcp does not know about.
 
