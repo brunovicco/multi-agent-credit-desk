@@ -40,6 +40,8 @@ src = [
     "services/bureau-mcp/tests",
     "services/decisao-agent/src",
     "services/decisao-agent/tests",
+    "services/cadastral-agent/src",
+    "services/cadastral-agent/tests",
     "tests",
 ]
 
@@ -84,15 +86,15 @@ warn_unused_configs = true
 warn_unused_ignores = true
 show_error_codes = true
 pretty = true
-mypy_path = "packages/contracts/src:packages/credit-core/src:services/policy-mcp/src:services/bureau-mcp/src:services/decisao-agent/src"
+mypy_path = "packages/contracts/src:packages/credit-core/src:services/policy-mcp/src:services/bureau-mcp/src:services/decisao-agent/src:services/cadastral-agent/src"
 
 [[tool.mypy.overrides]]
 module = ["tests.*"]
 disallow_untyped_decorators = false
 
 [tool.pytest.ini_options]
-addopts = "--strict-config --strict-markers -m 'not integration' --cov=packages/contracts/src/credit_desk_contracts --cov=packages/credit-core/src/credit_core --cov=services/policy-mcp/src/policy_mcp --cov=services/bureau-mcp/src/bureau_mcp --cov=services/decisao-agent/src/decisao_agent --cov-report=term-missing"
-testpaths = ["tests", "packages/contracts/tests", "packages/credit-core/tests", "services/policy-mcp/tests", "services/bureau-mcp/tests", "services/decisao-agent/tests"]
+addopts = "--strict-config --strict-markers -m 'not integration' --cov=packages/contracts/src/credit_desk_contracts --cov=packages/credit-core/src/credit_core --cov=services/policy-mcp/src/policy_mcp --cov=services/bureau-mcp/src/bureau_mcp --cov=services/decisao-agent/src/decisao_agent --cov=services/cadastral-agent/src/cadastral_agent --cov-report=term-missing"
+testpaths = ["tests", "packages/contracts/tests", "packages/credit-core/tests", "services/policy-mcp/tests", "services/bureau-mcp/tests", "services/decisao-agent/tests", "services/cadastral-agent/tests"]
 markers = [
     "integration: tests that require real infrastructure",
     "contract: tests that verify an interface contract",
@@ -107,6 +109,7 @@ source = [
     "services/policy-mcp/src/policy_mcp",
     "services/bureau-mcp/src/bureau_mcp",
     "services/decisao-agent/src/decisao_agent",
+    "services/cadastral-agent/src/cadastral_agent",
 ]
 
 [tool.coverage.report]
@@ -122,5 +125,6 @@ exclude_dirs = [
     "services/policy-mcp/tests",
     "services/bureau-mcp/tests",
     "services/decisao-agent/tests",
+    "services/cadastral-agent/tests",
 ]
 skips = []

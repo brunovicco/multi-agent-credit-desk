@@ -18,12 +18,17 @@
   against `policy-mcp`'s catalog over the real MCP protocol, and best-effort drafts an LLM
   opinion narrative via `policy-model-router`/LiteLLM without ever blocking or altering the
   deterministic decision - the workspace's first real A2A agent, exposed both as a batch CLI
-  and an A2A server over `a2a-sdk`, the official Linux Foundation-governed SDK). Future
-  application entrypoints (the orchestrator, further agents) belong under `services/` as
-  further packages, not in a root application package.
+  and an A2A server over `a2a-sdk`, the official Linux Foundation-governed SDK), and
+  `services/cadastral-agent` (import `cadastral_agent`, fetches a company's `bureau-mcp` report
+  and screens its KYC standing against a small, deterministic policy - `APPROVED`,
+  `COMMITTEE_REFERRAL`, or `BLOCKED` - scoped to what `bureau-mcp` actually provides rather than
+  the architecture blueprint's fuller "sócios, situação fiscal" aspiration, for which no data
+  source exists; CLI only in its first milestone, no A2A surface yet). Future application
+  entrypoints (the orchestrator, further agents) belong under `services/` as further packages,
+  not in a root application package.
 - Tests: pytest
 - Architecture: Clean Architecture, instantiated by `services/policy-mcp`, `services/bureau-mcp`,
-  and `services/decisao-agent`; see `docs/ARCHITECTURE.md`
+  `services/decisao-agent`, and `services/cadastral-agent`; see `docs/ARCHITECTURE.md`
 - Container: `Dockerfile` currently builds a workspace-validation image only (imports `credit_core`
   and `credit_desk_contracts`); it is not an application runtime image. Replace its `CMD` with a
   real `services/*` entrypoint when one exists.

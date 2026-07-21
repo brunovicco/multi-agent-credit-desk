@@ -1,0 +1,22 @@
+[project]
+name = "cadastral-agent"
+version = "0.1.0"
+description = "Screens a company's KYC standing against bureau-mcp's synthetic bureau report."
+readme = "README.md"
+requires-python = ">=3.13,<3.15"
+dependencies = [
+    "bureau-mcp",
+    "anyio>=4.14,<5",
+    "mcp>=1.28,<2",
+    "pydantic>=2.9,<3",
+]
+
+[tool.uv.sources]
+bureau-mcp = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cadastral_agent"]

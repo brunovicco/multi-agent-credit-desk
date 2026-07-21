@@ -20,6 +20,7 @@ code and is not itself installed. The workspace members are:
 | `services/policy-mcp` | `policy_mcp` | Read-only MCP server exposing a versioned catalog of the credit policy `credit_core` enforces. The workspace's first `services/*` package - see `services/policy-mcp/README.md`. |
 | `services/bureau-mcp` | `bureau_mcp` | Read-only MCP server exposing a synthetic credit-bureau report catalog (external score, negative records), keyed by CNPJ. No real credit-bureau connection exists or is planned - see `services/bureau-mcp/README.md`. |
 | `services/decisao-agent` | `decisao_agent` | Executes `credit_core.evaluation` directly, cross-checks the result against `policy-mcp`'s catalog over the real MCP protocol, and best-effort drafts an LLM opinion narrative via `policy-model-router`/LiteLLM. The workspace's first real A2A agent, exposed both as a batch CLI and an A2A server over `a2a-sdk` - see `services/decisao-agent/README.md`. |
+| `services/cadastral-agent` | `cadastral_agent` | Screens a company's KYC standing against `bureau-mcp`'s report via a small, deterministic policy (`APPROVED`/`COMMITTEE_REFERRAL`/`BLOCKED`). CLI only in its first milestone, no A2A surface yet - see `services/cadastral-agent/README.md`. |
 
 `credit_core` may import only the standard library and itself; every third-party or other
 workspace import is rejected by default, and dynamic import mechanisms (`importlib`, `__import__`)
@@ -74,10 +75,23 @@ around it. `tests/unit/test_a2a_otel_kit_pin.py` and the workspace-validation `D
 remain the only proof that the pin resolves and its public API (`Observability`,
 `ObservabilitySettings`) behaves as documented.
 
+`services/cadastral-agent` depends one-directionally on `bureau-mcp` -
+`cadastral_agent.adapters.bureau_mcp_client.BureauMcpClient` is the only module that speaks the
+MCP protocol, mirroring `decisao_agent.adapters.policy_mcp_client.PolicyMcpClient`'s boundary.
+Unlike `decisao_agent.application.ports.PolicyCatalogSnapshot`,
+`cadastral_agent.domain.bureau_finding.BureauFinding` lives in the domain layer, not
+`application`, since it is cadastral-agent's own business vocabulary (what the KYC policy
+reasons over), not just a query result shape. `cadastral-agent`'s KYC policy
+(`cadastral_agent.domain.kyc_policy`) is deliberately scoped to what `bureau-mcp` actually
+provides, not the full "sócios, situação fiscal" screening `docs/architecture-blueprint.md`
+describes, for which no data source exists in this workspace - see
+`docs/adr/0016-cadastral-agent-kyc-screening-policy.md`.
+
 Application entrypoints for the orchestrator do not exist yet. `services/policy-mcp` and
 `services/bureau-mcp` remain standalone MCP servers with no A2A surface. `services/decisao-agent`
-is the first `services/*` package with a real A2A surface, but no orchestrator discovers or calls
-it yet - the orchestrator remains a future `services/*` package.
+is the first `services/*` package with a real A2A surface; `services/cadastral-agent` has none yet
+(CLI only). No orchestrator discovers or calls any agent yet - the orchestrator remains a future
+`services/*` package.
 
 ## Layers
 

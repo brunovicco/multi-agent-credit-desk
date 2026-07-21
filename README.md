@@ -9,7 +9,7 @@ Finance, BCB, or credit bureau connection exists or is planned to exist without 
 separately reviewed integration. See `docs/adr/0009-reuse-existing-mcp-servers.md` for the
 transparency policy on the mock Open Finance MCP server.
 
-## Current state: Milestone 6c-ii - best-effort LLM opinion narrative
+## Current state: cadastral-agent (KYC screening core, CLI only)
 
 `packages/contracts` provides versioned Pydantic v2 schemas for artifact envelopes, structured
 events, and model-routing decisions (see `packages/contracts/README.md`). Agent-specific artifact
@@ -33,9 +33,9 @@ adapter *is* the system of record: a fixed, in-memory dataset of the three demo 
 `docs/architecture-blueprint.md` - see `services/bureau-mcp/README.md` and
 `docs/adr/0009-reuse-existing-mcp-servers.md`.
 
-No agent consumes either MCP server directly yet (`cadastral-agent`/`risco-agent` are not
-implemented in this repository); both are still built and tested standalone. No orchestrator is
-implemented yet either.
+`policy-mcp` is consumed by `decisao-agent` (below); `bureau-mcp` is now consumed by
+`cadastral-agent` (below) - `risco-agent` is not implemented in this repository yet. No
+orchestrator is implemented yet either.
 
 `services/decisao-agent` is the workspace's first `services/*` package with application logic
 beyond serving a catalog: it calls `credit_core.evaluation.evaluate_credit_application` directly
@@ -67,6 +67,16 @@ non-trivial latency phase (two network round-trips) worth reporting as `TASK_STA
 real `Task` makes `tasks/get`/`tasks/cancel` requests against this agent actually work - see
 `docs/adr/0015-decisao-agent-migrates-to-task-taskupdater.md`.
 
+`services/cadastral-agent` is the fourth `services/*` package: screens a company's KYC standing
+(`import cadastral_agent`) by fetching its `bureau-mcp` report and applying a small, deterministic
+policy over the external score and adverse records - `APPROVED`, `COMMITTEE_REFERRAL`, or
+`BLOCKED`. Its first milestone mirrors how `decisao-agent` itself began: a batch CLI only
+(`python -m cadastral_agent`), no A2A surface yet. `docs/architecture-blueprint.md` describes this
+agent as also validating "sócios, situação fiscal," for which no data source exists anywhere in
+this workspace - the KYC policy is deliberately scoped to what `bureau-mcp`'s one tool,
+`get_bureau_report`, actually returns - see
+`docs/adr/0016-cadastral-agent-kyc-screening-policy.md` and `services/cadastral-agent/README.md`.
+
 `a2a-otel-kit==0.4.2` (https://github.com/brunovicco/a2a-otel-kit) is pinned as a root workspace
 dependency per ADR-0003. It still has no consumer: `decisao-agent`'s new A2A surface uses
 `a2a-sdk` directly and does not yet wire `a2a-otel-kit`'s `Observability` around it - so today the
@@ -90,14 +100,16 @@ multi-agent-credit-desk/
 ├── services/
 │   ├── policy-mcp/      # import: policy_mcp - read-only MCP server, credit_core policy catalog
 │   ├── bureau-mcp/      # import: bureau_mcp - read-only MCP server, synthetic bureau report catalog
-│   └── decisao-agent/   # import: decisao_agent - credit_core evaluation + policy-mcp cross-check, CLI + A2A server
-├── docs/adr/            # canonical architecture decisions (0001, 0002-0015)
+│   ├── decisao-agent/   # import: decisao_agent - credit_core evaluation + policy-mcp cross-check, CLI + A2A server
+│   └── cadastral-agent/ # import: cadastral_agent - bureau-mcp KYC screening, CLI only
+├── docs/adr/            # canonical architecture decisions (0001, 0002-0016)
 └── pyproject.toml       # virtual workspace coordinator (tool.uv.package = false); no application code
 ```
 
 The root `pyproject.toml` is a **virtual workspace coordinator** - it holds no application code and
 is not itself installed. Future application entrypoints (agents, orchestrator) belong under
-`services/`, alongside `policy-mcp`, `bureau-mcp`, and `decisao-agent`. See `docs/ARCHITECTURE.md`
+`services/`, alongside `policy-mcp`, `bureau-mcp`, `decisao-agent`, and `cadastral-agent`. See
+`docs/ARCHITECTURE.md`
 and `docs/architecture-blueprint.md` for the full plan.
 
 `packages/credit-core` enforces a default-deny import policy (standard library and self only, no
