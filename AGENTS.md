@@ -13,12 +13,15 @@
   `credit_core` policy, following the Clean Architecture layout below), and `services/bureau-mcp`
   (import `bureau_mcp`, a read-only MCP server exposing a synthetic credit-bureau report catalog -
   no real credit-bureau connection exists or is planned, so its adapter is its own fixed dataset
-  rather than a translation of another package, unlike `policy-mcp`). Future application
-  entrypoints (agents, orchestrator) belong under `services/` as further packages, not in a root
-  application package.
+  rather than a translation of another package, unlike `policy-mcp`), and `services/decisao-agent`
+  (import `decisao_agent`, calls `credit_core.evaluation` directly and cross-checks the result
+  against `policy-mcp`'s catalog over the real MCP protocol - a batch CLI only, not yet an A2A
+  agent despite its name, since no A2A protocol SDK is pinned in this workspace). Future
+  application entrypoints (agents, orchestrator) belong under `services/` as further packages, not
+  in a root application package.
 - Tests: pytest
-- Architecture: Clean Architecture, instantiated by `services/policy-mcp` and `services/bureau-mcp`;
-  see `docs/ARCHITECTURE.md`
+- Architecture: Clean Architecture, instantiated by `services/policy-mcp`, `services/bureau-mcp`,
+  and `services/decisao-agent`; see `docs/ARCHITECTURE.md`
 - Container: `Dockerfile` currently builds a workspace-validation image only (imports `credit_core`
   and `credit_desk_contracts`); it is not an application runtime image. Replace its `CMD` with a
   real `services/*` entrypoint when one exists.

@@ -9,7 +9,7 @@ Finance, BCB, or credit bureau connection exists or is planned to exist without 
 separately reviewed integration. See `docs/adr/0009-reuse-existing-mcp-servers.md` for the
 transparency policy on the mock Open Finance MCP server.
 
-## Current state: Milestone 5 - bureau-mcp catalog
+## Current state: Milestone 6 - decisao-agent core (no A2A surface yet)
 
 `packages/contracts` provides versioned Pydantic v2 schemas for artifact envelopes, structured
 events, and model-routing decisions (see `packages/contracts/README.md`). Agent-specific artifact
@@ -33,14 +33,25 @@ adapter *is* the system of record: a fixed, in-memory dataset of the three demo 
 `docs/architecture-blueprint.md` - see `services/bureau-mcp/README.md` and
 `docs/adr/0009-reuse-existing-mcp-servers.md`.
 
-No agent consumes either MCP server yet (`cadastral-agent`/`risco-agent`/`decisao-agent` are not
-implemented in this repository); both are built and tested standalone. No orchestrator is
+No agent consumes either MCP server directly yet (`cadastral-agent`/`risco-agent` are not
+implemented in this repository); both are still built and tested standalone. No orchestrator is
 implemented yet either.
 
+`services/decisao-agent` is the workspace's first `services/*` package with application logic
+beyond serving a catalog: it calls `credit_core.evaluation.evaluate_credit_application` directly
+and cross-checks the result against `policy-mcp`'s catalog over the real MCP protocol (its first
+real MCP *client*, not just a server), so a decision can never reference a critical flag or
+policy version `policy-mcp` does not itself recognize. It is **not yet an A2A agent** despite its
+name: no A2A protocol SDK is pinned anywhere in this workspace, and adding one is a separate,
+explicitly reviewed dependency decision for a follow-up milestone. Until then it exposes a batch
+CLI (`python -m decisao_agent`, one JSON document in, one JSON document out) - see
+`services/decisao-agent/README.md` and
+`docs/adr/0012-decisao-agent-sources-credit-core-evaluation-directly.md`.
+
 `a2a-otel-kit==0.4.2` (https://github.com/brunovicco/a2a-otel-kit) is pinned as a root workspace
-dependency per ADR-0003. It still has no consumer - `policy-mcp` and `bureau-mcp` are MCP servers,
-not A2A agents, so neither uses it - so today it is only proven to install and initialize
-correctly, the same way `credit_core` and `credit_desk_contracts` are proven in the
+dependency per ADR-0003. It still has no consumer - `policy-mcp`, `bureau-mcp`, and `decisao-agent`
+are not A2A agents yet, so none of them use it - so today it is only proven to install and
+initialize correctly, the same way `credit_core` and `credit_desk_contracts` are proven in the
 workspace-validation `Dockerfile` image (see `tests/unit/test_a2a_otel_kit_pin.py`).
 
 `infra/docker-compose.yml` stands up `policy-model-router` (ADR-0003/0004 - a generic image
@@ -58,15 +69,16 @@ multi-agent-credit-desk/
 │   └── credit-core/     # import: credit_core - deterministic scoring/policy core (implemented)
 ├── services/
 │   ├── policy-mcp/      # import: policy_mcp - read-only MCP server, credit_core policy catalog
-│   └── bureau-mcp/      # import: bureau_mcp - read-only MCP server, synthetic bureau report catalog
-├── docs/adr/            # canonical architecture decisions (0001, 0002-0011)
+│   ├── bureau-mcp/      # import: bureau_mcp - read-only MCP server, synthetic bureau report catalog
+│   └── decisao-agent/   # import: decisao_agent - credit_core evaluation + policy-mcp cross-check (CLI only, no A2A yet)
+├── docs/adr/            # canonical architecture decisions (0001, 0002-0012)
 └── pyproject.toml       # virtual workspace coordinator (tool.uv.package = false); no application code
 ```
 
 The root `pyproject.toml` is a **virtual workspace coordinator** - it holds no application code and
 is not itself installed. Future application entrypoints (agents, orchestrator) belong under
-`services/`, alongside `policy-mcp` and `bureau-mcp`. See `docs/ARCHITECTURE.md` and
-`docs/architecture-blueprint.md` for the full plan.
+`services/`, alongside `policy-mcp`, `bureau-mcp`, and `decisao-agent`. See `docs/ARCHITECTURE.md`
+and `docs/architecture-blueprint.md` for the full plan.
 
 `packages/credit-core` enforces a default-deny import policy (standard library and self only, no
 LLM/A2A/MCP/HTTP/dynamic imports) via `scripts/validate_architecture.py` - see

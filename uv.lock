@@ -13,6 +13,7 @@ members = [
     "bureau-mcp",
     "credit-core",
     "credit-desk-contracts",
+    "decisao-agent",
     "multi-agent-credit-desk",
     "policy-mcp",
 ]
@@ -422,6 +423,27 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/75/c9/5d0ccdd19bc7d8ab803b90695c1706aa2ea8529685d18e682dc2524d2630/cyclonedx_python_lib-11.11.0.tar.gz", hash = "sha256:4b3194db72b613717f2912447e67ab618c75ff7dcac6c4af3c0e9e1ac617c102", size = 1442983, upload-time = "2026-06-17T11:57:49.055Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/22/f3/56ccb2884aaa3db5622368e5191a3384b15f35392aa93df8b2f508c660d2/cyclonedx_python_lib-11.11.0-py3-none-any.whl", hash = "sha256:3049fc83e06a059b5c5907a527625a8ed5073caab10607ed4c9e5503b590fd44", size = 528689, upload-time = "2026-06-17T11:57:47.358Z" },
+]
+
+[[package]]
+name = "decisao-agent"
+version = "0.1.0"
+source = { editable = "services/decisao-agent" }
+dependencies = [
+    { name = "anyio" },
+    { name = "credit-core" },
+    { name = "mcp" },
+    { name = "policy-mcp" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "anyio", specifier = ">=4.14,<5" },
+    { name = "credit-core", editable = "packages/credit-core" },
+    { name = "mcp", specifier = ">=1.28,<2" },
+    { name = "policy-mcp", editable = "services/policy-mcp" },
+    { name = "pydantic", specifier = ">=2.9,<3" },
 ]
 
 [[package]]
