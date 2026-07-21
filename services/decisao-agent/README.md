@@ -51,6 +51,7 @@ services/decisao-agent/src/decisao_agent/
 ├── application/    # CreditEvaluationPort + PolicyCatalogPort (protocols) + the evaluation use case
 ├── adapters/       # CreditCoreEvaluationAdapter (only module importing credit_core)
 │                   # PolicyMcpClient (only module speaking the MCP protocol)
+│                   # ModelRouterClient, LiteLLMClient (standalone, no use case consumes them yet)
 └── entrypoints/    # errors.py (shared error codes), schemas.py (Pydantic wire schemas)
                     # __main__.py (batch CLI composition root)
                     # agent_card.py, a2a_executor.py, a2a_server.py (A2A composition root)
@@ -59,6 +60,34 @@ services/decisao-agent/src/decisao_agent/
 Both entrypoints depend only on `application.evaluate.EvaluateCreditApplicationUseCase` and the
 same two adapters - adding the A2A surface changed nothing in `domain/`, `application/`, or
 `adapters/`.
+
+## LLM-drafted opinion clients (built standalone, not wired in yet)
+
+`ModelRouterClient` and `LiteLLMClient` are two further adapters, built and tested standalone
+before any use case consumes them - the same way `PolicyMcpClient` was in the milestone before
+this one. They exist to support a future LLM-drafted parecer (`opinion_drafting`/`json_repair`
+workloads, `docs/architecture-blueprint.md` section 2.2), not wired into
+`EvaluateCreditApplicationUseCase` yet.
+
+- `ModelRouterClient.route(request)` calls `policy-model-router`'s `POST /route`
+  (`http://localhost:8081` by default, `DECISAO_AGENT_MODEL_ROUTER_BASE_URL` to override) with
+  `credit_desk_contracts.routing.ModelRouteRequest`, returning a `ModelRouteDecision`. Verified
+  field-for-field against the real service's own OpenAPI schema, not assumed from the shared
+  contracts package alone - `tests/integration/test_model_router_client_live.py` asserts real,
+  live routing behavior (`opinion_drafting` → `reasoning-strong`, `json_repair` →
+  `fast-structured-output`) against a running container.
+- `LiteLLMClient.complete(model, messages)` calls LiteLLM's OpenAI-compatible
+  `POST /chat/completions` (`http://localhost:4000` by default,
+  `DECISAO_AGENT_LITELLM_BASE_URL`/`LITELLM_MASTER_KEY` to override/authenticate), returning a
+  `ChatCompletionResult`. **No real provider API key
+  (`GROQ_API_KEY`/`ANTHROPIC_API_KEY`) is available in this environment**, so unlike
+  `ModelRouterClient`, this adapter has no live-container integration test - only
+  `tests/unit/test_litellm_client.py` against a fake `httpx` transport. A real completion has not
+  been exercised end to end.
+
+Both adapters translate every transport/HTTP/response-shape failure into a stable domain error
+(`ModelRoutingUnavailableError`, `ChatCompletionUnavailableError`) - never a raw exception or
+stack trace - the same translation discipline `PolicyMcpClient` established.
 
 ## Running: batch CLI
 
@@ -113,11 +142,14 @@ uv run pytest -m integration services/decisao-agent/tests/integration --no-cov
 
 `tests/unit` covers the domain value objects, the `credit_core`-sourced adapter (a drift
 regression against `evaluate_credit_application`), the `policy-mcp` MCP client against a fake
-tool-call transport, the use case against fake ports, the schema mapping, the Agent Card, the
-architecture boundary (no `credit_core` import outside the adapter), and `DecisaoAgentExecutor.cancel()`.
-`tests/contract` exercises `DecisaoAgentExecutor` through the real `a2a-sdk` client/server
-machinery in-process over an ASGI transport (no socket, no subprocess) - the same style as
-`services/policy-mcp/tests/contract`. `tests/integration` spawns real subprocesses: the CLI test
-spawns a real `policy-mcp` subprocess; the A2A test spawns the real
+tool-call transport, `ModelRouterClient`/`LiteLLMClient` against a fake `httpx` transport, the
+use case against fake ports, the schema mapping, the Agent Card, the architecture boundary (no
+`credit_core` import outside its adapter), and `DecisaoAgentExecutor.cancel()`. `tests/contract`
+exercises `DecisaoAgentExecutor` through the real `a2a-sdk` client/server machinery in-process
+over an ASGI transport (no socket, no subprocess) - the same style as
+`services/policy-mcp/tests/contract`. `tests/integration` spawns real subprocesses and real
+containers: the CLI test spawns a real `policy-mcp` subprocess; the A2A test spawns the real
 `python -m decisao_agent.entrypoints.a2a_server` bound to a real TCP port, which in turn spawns
-its own real `policy-mcp` subprocess when a request arrives.
+its own real `policy-mcp` subprocess when a request arrives; `test_model_router_client_live.py`
+requires `docker compose -f infra/docker-compose.yml up -d policy-model-router` beforehand (see
+`docs/DEVELOPMENT.md`).
