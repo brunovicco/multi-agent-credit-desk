@@ -43,6 +43,11 @@ class CreditOpinion:
             ``approval_authority``. Empty whenever ``decision`` is ``"BLOCKED"``.
         blocking_reasons: Deterministic reason codes for each critical flag that caused a
             block. Empty unless ``decision`` is ``"BLOCKED"``.
+        narrative: An optional LLM-drafted narrative parecer describing this opinion in prose.
+            ``None`` when narrative drafting was not attempted, or was attempted and failed -
+            drafting is always best-effort and never blocks or alters the deterministic
+            ``decision`` above. See
+            ``docs/adr/0014-decisao-agent-drafts-an-optional-llm-opinion-narrative.md``.
     """
 
     policy_version: str
@@ -52,3 +57,4 @@ class CreditOpinion:
     approval_authority: str
     reason_codes: tuple[str, ...]
     blocking_reasons: tuple[str, ...]
+    narrative: str | None = None

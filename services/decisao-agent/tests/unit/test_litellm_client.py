@@ -11,7 +11,8 @@ import json
 import httpx
 import pytest
 
-from decisao_agent.adapters.litellm_client import ChatMessage, LiteLLMClient
+from decisao_agent.adapters.litellm_client import LiteLLMClient
+from decisao_agent.application.ports import ChatMessage
 from decisao_agent.domain.errors import ChatCompletionUnavailableError
 
 pytestmark = pytest.mark.anyio

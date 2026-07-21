@@ -17,6 +17,8 @@ from a2a.server.tasks import InMemoryTaskStore
 from starlette.applications import Starlette
 
 from decisao_agent.adapters.credit_core_evaluation_adapter import CreditCoreEvaluationAdapter
+from decisao_agent.adapters.litellm_client import LiteLLMClient
+from decisao_agent.adapters.model_router_client import ModelRouterClient
 from decisao_agent.adapters.policy_mcp_client import PolicyMcpClient
 from decisao_agent.application.evaluate import EvaluateCreditApplicationUseCase
 from decisao_agent.entrypoints.a2a_executor import DecisaoAgentExecutor
@@ -44,6 +46,8 @@ def build_app(base_url: str) -> Starlette:
     use_case = EvaluateCreditApplicationUseCase(
         evaluation_port=CreditCoreEvaluationAdapter(),
         policy_catalog_port=PolicyMcpClient(command=os.environ.get(_POLICY_MCP_COMMAND_ENV_VAR)),
+        model_routing_port=ModelRouterClient(),
+        chat_completion_port=LiteLLMClient(),
     )
     agent_card = build_agent_card(base_url)
     request_handler = DefaultRequestHandler(

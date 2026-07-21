@@ -19,7 +19,7 @@ code and is not itself installed. The workspace members are:
 | `packages/credit-core` | `credit_core` | Deterministic credit scoring and policy core. Implemented behind a synthetic demo policy - see `packages/credit-core/README.md`. |
 | `services/policy-mcp` | `policy_mcp` | Read-only MCP server exposing a versioned catalog of the credit policy `credit_core` enforces. The workspace's first `services/*` package - see `services/policy-mcp/README.md`. |
 | `services/bureau-mcp` | `bureau_mcp` | Read-only MCP server exposing a synthetic credit-bureau report catalog (external score, negative records), keyed by CNPJ. No real credit-bureau connection exists or is planned - see `services/bureau-mcp/README.md`. |
-| `services/decisao-agent` | `decisao_agent` | Executes `credit_core.evaluation` directly and cross-checks the result against `policy-mcp`'s catalog over the real MCP protocol. The workspace's first real A2A agent, exposed both as a batch CLI and an A2A server over `a2a-sdk` - see `services/decisao-agent/README.md`. |
+| `services/decisao-agent` | `decisao_agent` | Executes `credit_core.evaluation` directly, cross-checks the result against `policy-mcp`'s catalog over the real MCP protocol, and best-effort drafts an LLM opinion narrative via `policy-model-router`/LiteLLM. The workspace's first real A2A agent, exposed both as a batch CLI and an A2A server over `a2a-sdk` - see `services/decisao-agent/README.md`. |
 
 `credit_core` may import only the standard library and itself; every third-party or other
 workspace import is rejected by default, and dynamic import mechanisms (`importlib`, `__import__`)
@@ -54,6 +54,15 @@ package declares `mcp` itself rather than pinning it at the root). Its A2A compo
 (`decisao_agent.entrypoints.a2a_server`) is a second, separate entrypoint alongside the batch CLI
 - both call the same `EvaluateCreditApplicationUseCase`. See
 `docs/adr/0013-decisao-agent-adopts-a2a-sdk.md`.
+
+`EvaluateCreditApplicationUseCase` additionally depends on two optional ports,
+`ModelRoutingPort`/`ChatCompletionPort`, implemented by `ModelRouterClient`/`LiteLLMClient`
+(`httpx` against `policy-model-router`/LiteLLM). Unlike `credit_core`/`mcp`, `ModelRouterClient`
+returns `credit_desk_contracts.routing.ModelRouteDecision` verbatim rather than translating it
+into decisao-agent's own vocabulary - `credit_desk_contracts` is the workspace's shared,
+versioned contract layer (ADR-0005), not a single-producer package. Narrative drafting is
+strictly best-effort and never affects the deterministic decision - see
+`docs/adr/0014-decisao-agent-drafts-an-optional-llm-opinion-narrative.md`.
 
 `a2a-otel-kit==0.4.2` (https://github.com/brunovicco/a2a-otel-kit) is pinned in the root
 `pyproject.toml` `[project.dependencies]` per ADR-0003 - a virtual project's dependencies are
