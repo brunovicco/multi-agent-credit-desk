@@ -1,14 +1,15 @@
 """``python -m decisao_agent`` entrypoint: evaluate one credit application read from stdin.
 
-This package's first milestone has no A2A surface yet (see
-``docs/adr/0012-decisao-agent-sources-credit-core-evaluation-directly.md``): the CLI reads one
-``ApplicationSnapshotInput`` JSON document from stdin, evaluates it, and writes exactly one JSON
-document to stdout - a ``CreditOpinion`` on success, or a stable ``{"code": ..., "message": ...}``
-error envelope on failure, distinguished by exit status. This mirrors how ``policy-mcp`` and
-``bureau-mcp`` return a tool error on the same channel as a tool result rather than on a
-separate stream. stderr carries structured logs only, never protocol-level data, so nothing
-written there needs to be machine-parsed - never a raw exception message or stack trace either
-way, per ``.claude/rules/api-boundaries.md``.
+This is a batch entrypoint, separate from the A2A server (``entrypoints.a2a_server``) - a
+one-shot process that reads one ``ApplicationSnapshotInput`` JSON document from stdin, evaluates
+it, and writes exactly one JSON document to stdout - a ``CreditOpinion`` on success, or a stable
+``{"code": ..., "message": ...}`` error envelope on failure, distinguished by exit status. This
+mirrors how ``policy-mcp`` and ``bureau-mcp`` return a tool error on the same channel as a tool
+result rather than on a separate stream. stderr carries structured logs only, never
+protocol-level data, so nothing written there needs to be machine-parsed - never a raw exception
+message or stack trace either way, per ``.claude/rules/api-boundaries.md``. See
+``docs/adr/0012-decisao-agent-sources-credit-core-evaluation-directly.md`` and
+``docs/adr/0013-decisao-agent-adopts-a2a-sdk.md``.
 """
 
 import asyncio
@@ -23,25 +24,13 @@ from pydantic import ValidationError
 from decisao_agent.adapters.credit_core_evaluation_adapter import CreditCoreEvaluationAdapter
 from decisao_agent.adapters.policy_mcp_client import PolicyMcpClient
 from decisao_agent.application.evaluate import EvaluateCreditApplicationUseCase
-from decisao_agent.domain.errors import (
-    DecisaoAgentError,
-    InvalidApplicationSnapshotError,
-    PolicyCatalogUnavailableError,
-    PolicyVersionMismatchError,
-    UnknownCriticalFlagError,
-)
+from decisao_agent.domain.errors import DecisaoAgentError
 from decisao_agent.entrypoints import schemas
+from decisao_agent.entrypoints.errors import INVALID_INPUT, error_code_for
 
 logger = logging.getLogger(__name__)
 
 _POLICY_MCP_COMMAND_ENV_VAR = "DECISAO_AGENT_POLICY_MCP_COMMAND"
-
-_ERROR_CODES: dict[type[DecisaoAgentError], str] = {
-    InvalidApplicationSnapshotError: "INVALID_APPLICATION_SNAPSHOT",
-    UnknownCriticalFlagError: "UNKNOWN_CRITICAL_FLAG",
-    PolicyVersionMismatchError: "POLICY_VERSION_MISMATCH",
-    PolicyCatalogUnavailableError: "POLICY_CATALOG_UNAVAILABLE",
-}
 
 
 def main() -> None:
@@ -61,7 +50,7 @@ def main() -> None:
         input_model = schemas.ApplicationSnapshotInput.model_validate_json(sys.stdin.read())
     except ValidationError as exc:
         _log_and_exit(
-            "INVALID_INPUT", "the input is not a valid ApplicationSnapshotInput", exc, started
+            INVALID_INPUT, "the input is not a valid ApplicationSnapshotInput", exc, started
         )
 
     snapshot = schemas.to_application_snapshot(input_model)
@@ -73,8 +62,7 @@ def main() -> None:
     try:
         credit_opinion = asyncio.run(use_case.execute(snapshot))
     except DecisaoAgentError as exc:
-        code = _ERROR_CODES.get(type(exc), "EVALUATION_FAILED")
-        _log_and_exit(code, str(exc), exc, started)
+        _log_and_exit(error_code_for(exc), str(exc), exc, started)
 
     duration_ms = (time.monotonic() - started) * 1000
     logger.info(
