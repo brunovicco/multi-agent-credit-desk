@@ -6,6 +6,11 @@ Spawns the packaged CLI entrypoint (not an in-process fake), feeds it one real
 stdout - proving the console entrypoint, the credit_core adapter, and the real policy-mcp MCP
 client all work together, not just the composition root in isolation. Matches the existing
 pattern in `services/policy-mcp/tests/integration/test_server_stdio_roundtrip.py`.
+
+``test_cli_leaves_narrative_none_when_routing_succeeds_but_litellm_is_unreachable`` additionally
+requires `docker compose -f infra/docker-compose.yml up -d policy-model-router` beforehand (see
+docs/DEVELOPMENT.md); every other test in this module needs no infra beyond the packaged
+policy-mcp subprocess.
 """
 
 import json
@@ -98,3 +103,23 @@ def test_cli_reports_a_stable_error_when_policy_mcp_is_unreachable() -> None:
     assert body["code"] == "POLICY_CATALOG_UNAVAILABLE"
     assert "Traceback" not in process.stdout
     assert "Traceback" not in process.stderr
+
+
+def test_cli_leaves_narrative_none_when_routing_succeeds_but_litellm_is_unreachable() -> None:
+    """Real routing succeeds (requires a real policy-model-router); LiteLLM is not running in
+    this environment, so completion fails - narrative must still gracefully be None, and the
+    deterministic decision must be unaffected.
+    """
+    process = subprocess.run(
+        [sys.executable, "-m", "decisao_agent"],
+        input=json.dumps(_HEALTHY_INPUT),
+        capture_output=True,
+        text=True,
+        timeout=_TIMEOUT_SECONDS,
+        check=False,
+    )
+
+    assert process.returncode == 0, process.stderr
+    body = json.loads(process.stdout)
+    assert body["decision"] == "APPROVAL_RECOMMENDED"
+    assert body["narrative"] is None

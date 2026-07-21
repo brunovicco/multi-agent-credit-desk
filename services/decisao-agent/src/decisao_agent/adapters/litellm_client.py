@@ -1,54 +1,30 @@
 """Adapter that requests a chat completion from LiteLLM's OpenAI-compatible proxy.
 
-No use case consumes this yet - built and tested standalone first, the same way
-``ModelRouterClient`` and ``PolicyMcpClient`` were. ``LITELLM_MASTER_KEY`` authenticates to the
-local proxy per ``infra/docker-compose.yml``; without a real provider key
-(``GROQ_API_KEY``/``ANTHROPIC_API_KEY``) configured on the proxy itself, completions fail even
-though this client and the proxy are both reachable - see ``docs/DEVELOPMENT.md``'s "Local infra
-stack" section. No real provider credentials are available in this environment, so this adapter
-is verified against a real reachable LiteLLM proxy only up to the point completions would
-require a paid provider key; ``tests/unit`` covers the rest against a fake transport.
+Implements ``application.ports.ChatCompletionPort``, consumed by
+``EvaluateCreditApplicationUseCase`` for the optional, best-effort LLM-drafted opinion narrative
+- see ``docs/adr/0014-decisao-agent-drafts-an-optional-llm-opinion-narrative.md``.
+``LITELLM_MASTER_KEY`` authenticates to the local proxy per ``infra/docker-compose.yml``; without
+a real provider key (``GROQ_API_KEY``/``ANTHROPIC_API_KEY``) configured on the proxy itself,
+completions fail even though this client and the proxy are both reachable - see
+``docs/DEVELOPMENT.md``'s "Local infra stack" section. No real provider credentials are available
+in this environment, so this adapter is verified against a real reachable LiteLLM proxy only up
+to the point completions would require a paid provider key; ``tests/unit`` covers the rest
+against a fake transport.
 """
 
 import os
 from collections.abc import Sequence
-from dataclasses import dataclass
 from typing import Any
 
 import httpx
 
+from decisao_agent.application.ports import ChatCompletionResult, ChatMessage
 from decisao_agent.domain.errors import ChatCompletionUnavailableError
 
 _BASE_URL_ENV_VAR = "DECISAO_AGENT_LITELLM_BASE_URL"
 _MASTER_KEY_ENV_VAR = "LITELLM_MASTER_KEY"
 _DEFAULT_BASE_URL = "http://localhost:4000"
 _DEFAULT_TIMEOUT_SECONDS = 60.0
-
-
-@dataclass(frozen=True, slots=True)
-class ChatMessage:
-    """One message in a chat completion request.
-
-    Attributes:
-        role: The message role (``"system"``, ``"user"``, or ``"assistant"``).
-        content: The message text.
-    """
-
-    role: str
-    content: str
-
-
-@dataclass(frozen=True, slots=True)
-class ChatCompletionResult:
-    """The outcome of one chat completion request.
-
-    Attributes:
-        model: The model group the completion was served from.
-        content: The completion text.
-    """
-
-    model: str
-    content: str
 
 
 class LiteLLMClient:

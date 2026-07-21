@@ -3,12 +3,22 @@
 Defined on the consumer side (``application``), near the use case that needs them, per
 ``.claude/rules/architecture.md``. ``CreditEvaluationPort`` is the seam that keeps this layer
 independent of ``credit_core``; ``PolicyCatalogPort`` is the seam that keeps it independent of
-how policy-mcp is actually reached (MCP over stdio today).
+how policy-mcp is actually reached (MCP over stdio today). ``ModelRoutingPort`` and
+``ChatCompletionPort`` are the seams for the optional, best-effort LLM-drafted opinion narrative
+- see ``docs/adr/0014-decisao-agent-drafts-an-optional-llm-opinion-narrative.md``.
+
+``ChatMessage``/``ChatCompletionResult`` live here, not in ``adapters.litellm_client`` where they
+were first defined, now that a real consumer (``ChatCompletionPort``) needs to reference them -
+they are decisao-agent's own generic chat-completion vocabulary, not a shared workspace contract
+like ``credit_desk_contracts.routing.ModelRouteRequest``/``ModelRouteDecision``, which
+``ModelRoutingPort`` uses verbatim.
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
+from credit_desk_contracts.routing import ModelRouteDecision, ModelRouteRequest
 from decisao_agent.domain.opinion import CreditOpinion
 from decisao_agent.domain.snapshot import ApplicationSnapshot
 
@@ -61,5 +71,76 @@ class PolicyCatalogPort(Protocol):
 
         Returns:
             A ``PolicyCatalogSnapshot`` covering policy-mcp's current catalog.
+        """
+        ...
+
+
+class ModelRoutingPort(Protocol):
+    """Read-only access to a model-routing decision, for drafting the opinion narrative.
+
+    The only implementation shipped today, ``ModelRouterClient``, calls
+    ``policy-model-router``'s ``POST /route`` over HTTP.
+    """
+
+    async def route(self, request: ModelRouteRequest) -> ModelRouteDecision:
+        """Request a model-routing decision for one workload.
+
+        Args:
+            request: The model-routing request to submit.
+
+        Returns:
+            The routing decision, including every rejected candidate.
+
+        Raises:
+            ModelRoutingUnavailableError: If a decision cannot be obtained.
+        """
+        ...
+
+
+@dataclass(frozen=True, slots=True)
+class ChatMessage:
+    """One message in a chat completion request.
+
+    Attributes:
+        role: The message role (``"system"``, ``"user"``, or ``"assistant"``).
+        content: The message text.
+    """
+
+    role: str
+    content: str
+
+
+@dataclass(frozen=True, slots=True)
+class ChatCompletionResult:
+    """The outcome of one chat completion request.
+
+    Attributes:
+        model: The model group the completion was served from.
+        content: The completion text.
+    """
+
+    model: str
+    content: str
+
+
+class ChatCompletionPort(Protocol):
+    """Access to a chat completion, for drafting the opinion narrative.
+
+    The only implementation shipped today, ``LiteLLMClient``, calls LiteLLM's
+    OpenAI-compatible ``POST /chat/completions`` over HTTP.
+    """
+
+    async def complete(self, model: str, messages: Sequence[ChatMessage]) -> ChatCompletionResult:
+        """Request one chat completion.
+
+        Args:
+            model: The model group to complete with (e.g. ``"reasoning-strong"``).
+            messages: The conversation to complete, in order.
+
+        Returns:
+            The completion result.
+
+        Raises:
+            ChatCompletionUnavailableError: If a completion cannot be obtained.
         """
         ...

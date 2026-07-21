@@ -1,8 +1,9 @@
 # decisao-agent
 
-Executes the deterministic `credit_core` evaluation for one application snapshot and
-cross-checks the result against `policy-mcp`'s catalog, so a decision can never be trusted
-against a critical flag name or policy version `policy-mcp` does not itself recognize.
+Executes the deterministic `credit_core` evaluation for one application snapshot, cross-checks
+the result against `policy-mcp`'s catalog, and, best-effort, drafts an LLM narrative parecer -
+never blocking or altering the deterministic decision, per
+`docs/adr/0008-deterministic-core-without-llm.md`.
 
 ## Current scope: deterministic core, exposed two ways
 
@@ -47,43 +48,52 @@ Clean Architecture, consistent with `docs/ARCHITECTURE.md`:
 
 ```text
 services/decisao-agent/src/decisao_agent/
-├── domain/        # ApplicationSnapshot, CreditOpinion, errors - decisao-agent's own vocabulary
-├── application/    # CreditEvaluationPort + PolicyCatalogPort (protocols) + the evaluation use case
+├── domain/        # ApplicationSnapshot, CreditOpinion (incl. narrative), errors
+├── application/    # ports.py: CreditEvaluationPort, PolicyCatalogPort, ModelRoutingPort,
+│                   #   ChatCompletionPort (+ ChatMessage/ChatCompletionResult)
+│                   # evaluate.py: EvaluateCreditApplicationUseCase (deterministic decision,
+│                   #   then best-effort narrative drafting)
 ├── adapters/       # CreditCoreEvaluationAdapter (only module importing credit_core)
 │                   # PolicyMcpClient (only module speaking the MCP protocol)
-│                   # ModelRouterClient, LiteLLMClient (standalone, no use case consumes them yet)
+│                   # ModelRouterClient, LiteLLMClient (implement the two drafting ports)
 └── entrypoints/    # errors.py (shared error codes), schemas.py (Pydantic wire schemas)
                     # __main__.py (batch CLI composition root)
                     # agent_card.py, a2a_executor.py, a2a_server.py (A2A composition root)
 ```
 
 Both entrypoints depend only on `application.evaluate.EvaluateCreditApplicationUseCase` and the
-same two adapters - adding the A2A surface changed nothing in `domain/`, `application/`, or
+same four adapters - adding the A2A surface changed nothing in `domain/`, `application/`, or
 `adapters/`.
 
-## LLM-drafted opinion clients (built standalone, not wired in yet)
+## Best-effort LLM-drafted opinion narrative
 
-`ModelRouterClient` and `LiteLLMClient` are two further adapters, built and tested standalone
-before any use case consumes them - the same way `PolicyMcpClient` was in the milestone before
-this one. They exist to support a future LLM-drafted parecer (`opinion_drafting`/`json_repair`
-workloads, `docs/architecture-blueprint.md` section 2.2), not wired into
-`EvaluateCreditApplicationUseCase` yet.
+`EvaluateCreditApplicationUseCase` always computes the deterministic `CreditOpinion` first, then
+attempts to draft `CreditOpinion.narrative: str | None` via `ModelRoutingPort`/
+`ChatCompletionPort` (implemented by `ModelRouterClient`/`LiteLLMClient`). Drafting is strictly
+best-effort: a routing or completion failure is caught and mapped to `narrative=None`, never
+re-raised, and never changes `decision`, `total_score`, or any other deterministic field - see
+`docs/adr/0014-decisao-agent-drafts-an-optional-llm-opinion-narrative.md`.
+
+**No real provider API key (`GROQ_API_KEY`/`ANTHROPIC_API_KEY`) is available in this
+environment.** Both entrypoints construct real `ModelRouterClient()`/`LiteLLMClient()` pointing
+at the default local compose URLs - routing against a real `policy-model-router` succeeds when
+that container is running (verified live:
+`tests/integration/test_model_router_client_live.py`,
+`tests/integration/test_decisao_agent_cli_stdio_roundtrip.py::test_cli_leaves_narrative_none_when_routing_succeeds_but_litellm_is_unreachable`),
+but the LiteLLM completion step always fails without a real key, so today `narrative` is always
+`None` in practice. This resolves automatically once real credentials and the compose stack are
+both present - no code change required.
 
 - `ModelRouterClient.route(request)` calls `policy-model-router`'s `POST /route`
   (`http://localhost:8081` by default, `DECISAO_AGENT_MODEL_ROUTER_BASE_URL` to override) with
   `credit_desk_contracts.routing.ModelRouteRequest`, returning a `ModelRouteDecision`. Verified
   field-for-field against the real service's own OpenAPI schema, not assumed from the shared
-  contracts package alone - `tests/integration/test_model_router_client_live.py` asserts real,
-  live routing behavior (`opinion_drafting` → `reasoning-strong`, `json_repair` →
-  `fast-structured-output`) against a running container.
+  contracts package alone.
 - `LiteLLMClient.complete(model, messages)` calls LiteLLM's OpenAI-compatible
   `POST /chat/completions` (`http://localhost:4000` by default,
   `DECISAO_AGENT_LITELLM_BASE_URL`/`LITELLM_MASTER_KEY` to override/authenticate), returning a
-  `ChatCompletionResult`. **No real provider API key
-  (`GROQ_API_KEY`/`ANTHROPIC_API_KEY`) is available in this environment**, so unlike
-  `ModelRouterClient`, this adapter has no live-container integration test - only
-  `tests/unit/test_litellm_client.py` against a fake `httpx` transport. A real completion has not
-  been exercised end to end.
+  `ChatCompletionResult`. Unit-tested only (`tests/unit/test_litellm_client.py`, fake `httpx`
+  transport) - no real completion has been exercised end to end.
 
 Both adapters translate every transport/HTTP/response-shape failure into a stable domain error
 (`ModelRoutingUnavailableError`, `ChatCompletionUnavailableError`) - never a raw exception or
@@ -140,16 +150,20 @@ uv run pytest services/decisao-agent
 uv run pytest -m integration services/decisao-agent/tests/integration --no-cov
 ```
 
-`tests/unit` covers the domain value objects, the `credit_core`-sourced adapter (a drift
-regression against `evaluate_credit_application`), the `policy-mcp` MCP client against a fake
-tool-call transport, `ModelRouterClient`/`LiteLLMClient` against a fake `httpx` transport, the
-use case against fake ports, the schema mapping, the Agent Card, the architecture boundary (no
-`credit_core` import outside its adapter), and `DecisaoAgentExecutor.cancel()`. `tests/contract`
-exercises `DecisaoAgentExecutor` through the real `a2a-sdk` client/server machinery in-process
-over an ASGI transport (no socket, no subprocess) - the same style as
+`tests/unit` covers the domain value objects (including `narrative`), the `credit_core`-sourced
+adapter (a drift regression against `evaluate_credit_application`), the `policy-mcp` MCP client
+against a fake tool-call transport, `ModelRouterClient`/`LiteLLMClient` against a fake `httpx`
+transport, the use case against fake ports (narrative attached on success, `None` when a port is
+unset or either drafting step fails), the schema mapping, the Agent Card, the architecture
+boundary (no `credit_core` import outside its adapter), and `DecisaoAgentExecutor.cancel()`.
+`tests/contract` exercises `DecisaoAgentExecutor` through the real `a2a-sdk` client/server
+machinery in-process over an ASGI transport (no socket, no subprocess) - the same style as
 `services/policy-mcp/tests/contract`. `tests/integration` spawns real subprocesses and real
 containers: the CLI test spawns a real `policy-mcp` subprocess; the A2A test spawns the real
 `python -m decisao_agent.entrypoints.a2a_server` bound to a real TCP port, which in turn spawns
-its own real `policy-mcp` subprocess when a request arrives; `test_model_router_client_live.py`
-requires `docker compose -f infra/docker-compose.yml up -d policy-model-router` beforehand (see
-`docs/DEVELOPMENT.md`).
+its own real `policy-mcp` subprocess when a request arrives. Two tests additionally require
+`docker compose -f infra/docker-compose.yml up -d policy-model-router` beforehand (see
+`docs/DEVELOPMENT.md`): `test_model_router_client_live.py` and
+`test_decisao_agent_cli_stdio_roundtrip.py::test_cli_leaves_narrative_none_when_routing_succeeds_but_litellm_is_unreachable`,
+which proves real routing succeeding does not, by itself, produce a narrative without a real
+LiteLLM completion too.

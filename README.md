@@ -9,7 +9,7 @@ Finance, BCB, or credit bureau connection exists or is planned to exist without 
 separately reviewed integration. See `docs/adr/0009-reuse-existing-mcp-servers.md` for the
 transparency policy on the mock Open Finance MCP server.
 
-## Current state: Milestone 6c-i - policy-model-router/LiteLLM clients (standalone)
+## Current state: Milestone 6c-ii - best-effort LLM opinion narrative
 
 `packages/contracts` provides versioned Pydantic v2 schemas for artifact envelopes, structured
 events, and model-routing decisions (see `packages/contracts/README.md`). Agent-specific artifact
@@ -50,14 +50,16 @@ chosen over the independent `python-a2a` package for provenance, maintenance, an
 exists alongside it - both entrypoints share the same use case and adapters. See
 `services/decisao-agent/README.md`.
 
-`services/decisao-agent` also ships two further standalone adapters, not wired into a use case
-yet: `ModelRouterClient` (calls `policy-model-router`'s `POST /route`, verified field-for-field
-against the real service's OpenAPI schema and live-tested against a running container) and
-`LiteLLMClient` (calls LiteLLM's OpenAI-compatible completions endpoint, unit-tested against a
-fake `httpx` transport only - no real provider API key is available in this environment, so a
-real completion has not been exercised end to end). Both exist to support a future LLM-drafted
-credit opinion (`opinion_drafting`/`json_repair` workloads); see
-`services/decisao-agent/README.md`.
+`EvaluateCreditApplicationUseCase` now always computes the deterministic decision first, then
+attempts to draft `CreditOpinion.narrative` via `ModelRouterClient`/`LiteLLMClient`
+(`ModelRoutingPort`/`ChatCompletionPort` in `packages/decisao-agent`'s application layer) -
+strictly best-effort: a routing or completion failure is caught and mapped to `narrative=None`,
+never re-raised, and never affects the deterministic decision - see
+`docs/adr/0014-decisao-agent-drafts-an-optional-llm-opinion-narrative.md`. **No real provider API
+key (`GROQ_API_KEY`/`ANTHROPIC_API_KEY`) is available in this environment**, so `narrative` is
+always `None` in practice today, even though real routing against a running
+`policy-model-router` container has been verified to succeed - this resolves automatically once
+real credentials are configured, no code change required. See `services/decisao-agent/README.md`.
 
 `a2a-otel-kit==0.4.2` (https://github.com/brunovicco/a2a-otel-kit) is pinned as a root workspace
 dependency per ADR-0003. It still has no consumer: `decisao-agent`'s new A2A surface uses
@@ -83,7 +85,7 @@ multi-agent-credit-desk/
 │   ├── policy-mcp/      # import: policy_mcp - read-only MCP server, credit_core policy catalog
 │   ├── bureau-mcp/      # import: bureau_mcp - read-only MCP server, synthetic bureau report catalog
 │   └── decisao-agent/   # import: decisao_agent - credit_core evaluation + policy-mcp cross-check, CLI + A2A server
-├── docs/adr/            # canonical architecture decisions (0001, 0002-0013)
+├── docs/adr/            # canonical architecture decisions (0001, 0002-0014)
 └── pyproject.toml       # virtual workspace coordinator (tool.uv.package = false); no application code
 ```
 

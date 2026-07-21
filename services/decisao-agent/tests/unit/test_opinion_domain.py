@@ -62,3 +62,32 @@ def test_credit_opinion_holds_component_scores_in_order() -> None:
     )
 
     assert opinion.component_scores == (bureau_score, leverage_ratio)
+
+
+def test_credit_opinion_narrative_defaults_to_none() -> None:
+    opinion = CreditOpinion(
+        policy_version="demo-v1",
+        total_score=Decimal("80"),
+        component_scores=(),
+        decision="APPROVAL_RECOMMENDED",
+        approval_authority="ANALYST",
+        reason_codes=(),
+        blocking_reasons=(),
+    )
+
+    assert opinion.narrative is None
+
+
+def test_credit_opinion_holds_an_explicit_narrative() -> None:
+    opinion = CreditOpinion(
+        policy_version="demo-v1",
+        total_score=Decimal("80"),
+        component_scores=(),
+        decision="APPROVAL_RECOMMENDED",
+        approval_authority="ANALYST",
+        reason_codes=(),
+        blocking_reasons=(),
+        narrative="Parecer favorável ao crédito solicitado.",
+    )
+
+    assert opinion.narrative == "Parecer favorável ao crédito solicitado."

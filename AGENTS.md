@@ -14,11 +14,13 @@
   (import `bureau_mcp`, a read-only MCP server exposing a synthetic credit-bureau report catalog -
   no real credit-bureau connection exists or is planned, so its adapter is its own fixed dataset
   rather than a translation of another package, unlike `policy-mcp`), and `services/decisao-agent`
-  (import `decisao_agent`, calls `credit_core.evaluation` directly and cross-checks the result
-  against `policy-mcp`'s catalog over the real MCP protocol - the workspace's first real A2A
-  agent, exposed both as a batch CLI and an A2A server over `a2a-sdk`, the official Linux
-  Foundation-governed SDK). Future application entrypoints (the orchestrator, further agents)
-  belong under `services/` as further packages, not in a root application package.
+  (import `decisao_agent`, calls `credit_core.evaluation` directly, cross-checks the result
+  against `policy-mcp`'s catalog over the real MCP protocol, and best-effort drafts an LLM
+  opinion narrative via `policy-model-router`/LiteLLM without ever blocking or altering the
+  deterministic decision - the workspace's first real A2A agent, exposed both as a batch CLI
+  and an A2A server over `a2a-sdk`, the official Linux Foundation-governed SDK). Future
+  application entrypoints (the orchestrator, further agents) belong under `services/` as
+  further packages, not in a root application package.
 - Tests: pytest
 - Architecture: Clean Architecture, instantiated by `services/policy-mcp`, `services/bureau-mcp`,
   and `services/decisao-agent`; see `docs/ARCHITECTURE.md`

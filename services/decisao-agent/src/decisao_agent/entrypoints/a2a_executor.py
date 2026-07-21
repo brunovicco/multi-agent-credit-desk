@@ -62,7 +62,9 @@ class DecisaoAgentExecutor(AgentExecutor):
 
         snapshot = schemas.to_application_snapshot(input_model)
         try:
-            credit_opinion = await self._use_case.execute(snapshot)
+            credit_opinion = await self._use_case.execute(
+                snapshot, workflow_id=context.context_id, task_id=context.task_id
+            )
         except DecisaoAgentError as exc:
             await self._respond_with_error(event_queue, context, error_code_for(exc), str(exc))
             return

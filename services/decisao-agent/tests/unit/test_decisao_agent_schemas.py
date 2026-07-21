@@ -107,6 +107,24 @@ def test_to_credit_opinion_maps_component_scores_in_order() -> None:
     assert len(wire.component_scores) == 1
     assert wire.component_scores[0].component == "BUREAU_SCORE"
     assert wire.decision == "APPROVAL_RECOMMENDED"
+    assert wire.narrative is None
+
+
+def test_to_credit_opinion_maps_a_present_narrative() -> None:
+    opinion = CreditOpinion(
+        policy_version="demo-v1",
+        total_score=Decimal("100"),
+        component_scores=(),
+        decision="APPROVAL_RECOMMENDED",
+        approval_authority="ANALYST",
+        reason_codes=(),
+        blocking_reasons=(),
+        narrative="Parecer favorável.",
+    )
+
+    wire = schemas.to_credit_opinion(opinion)
+
+    assert wire.narrative == "Parecer favorável."
 
 
 def test_credit_opinion_schema_is_frozen_after_construction() -> None:

@@ -67,6 +67,7 @@ class CreditOpinion(_DecisaoAgentContract):
     approval_authority: str
     reason_codes: tuple[str, ...]
     blocking_reasons: tuple[str, ...]
+    narrative: str | None = None
 
 
 def to_application_snapshot(
@@ -130,4 +131,5 @@ def to_credit_opinion(credit_opinion: opinion.CreditOpinion) -> CreditOpinion:
         approval_authority=credit_opinion.approval_authority,
         reason_codes=credit_opinion.reason_codes,
         blocking_reasons=credit_opinion.blocking_reasons,
+        narrative=credit_opinion.narrative,
     )

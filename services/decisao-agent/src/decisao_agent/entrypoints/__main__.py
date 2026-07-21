@@ -22,6 +22,8 @@ import time
 from pydantic import ValidationError
 
 from decisao_agent.adapters.credit_core_evaluation_adapter import CreditCoreEvaluationAdapter
+from decisao_agent.adapters.litellm_client import LiteLLMClient
+from decisao_agent.adapters.model_router_client import ModelRouterClient
 from decisao_agent.adapters.policy_mcp_client import PolicyMcpClient
 from decisao_agent.application.evaluate import EvaluateCreditApplicationUseCase
 from decisao_agent.domain.errors import DecisaoAgentError
@@ -57,6 +59,8 @@ def main() -> None:
     use_case = EvaluateCreditApplicationUseCase(
         evaluation_port=CreditCoreEvaluationAdapter(),
         policy_catalog_port=PolicyMcpClient(command=os.environ.get(_POLICY_MCP_COMMAND_ENV_VAR)),
+        model_routing_port=ModelRouterClient(),
+        chat_completion_port=LiteLLMClient(),
     )
 
     try:
@@ -70,6 +74,7 @@ def main() -> None:
         extra={
             "outcome": "ok",
             "decision": credit_opinion.decision,
+            "narrative_drafted": credit_opinion.narrative is not None,
             "duration_ms": round(duration_ms, 3),
         },
     )
