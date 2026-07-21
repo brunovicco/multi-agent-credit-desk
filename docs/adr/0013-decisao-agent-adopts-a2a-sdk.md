@@ -44,21 +44,20 @@ already reads/writes as a `TextPart` with `media_type="application/json"`
 (`a2a.helpers.proto_helpers.new_text_message`/`get_message_text`), never a `DataPart`. A plain
 protobuf string field is transported verbatim with no precision loss.
 
-### Execution pattern: immediate `Message`, not `Task` + `TaskUpdater`
+### Execution pattern: immediate `Message`, not `Task` + `TaskUpdater` (superseded)
 
 `AgentExecutor.execute()`'s own contract documents two allowed workflows: "Immediate response:
 Enqueue a SINGLE `Message` object" or "Asynchronous/long-running: Enqueue a `Task`... emit
-`TaskStatusUpdateEvent`/`TaskArtifactUpdateEvent` over time." `credit_core` evaluation is a fast,
-synchronous, in-process computation with no genuine work phases, no I/O to await beyond the
-policy-mcp cross-check, and nothing to report incrementally - so `DecisaoAgentExecutor` uses the
-immediate-`Message` pattern. Publishing fake `TASK_STATE_WORKING` transitions for a call that
-completes in milliseconds would misrepresent the agent's actual behavior. The `Task`/`TaskUpdater`
-pattern is expected to become necessary once a future milestone adds the `opinion_drafting` LLM
-workload (`docs/architecture-blueprint.md` section 2.2), which genuinely has a working phase.
+`TaskStatusUpdateEvent`/`TaskArtifactUpdateEvent` over time." At adoption, `credit_core` evaluation
+was a fast, synchronous, in-process computation with no genuine work phases, no I/O to await beyond
+the policy-mcp cross-check, and nothing to report incrementally - so `DecisaoAgentExecutor` used
+the immediate-`Message` pattern, and `cancel()` always raised
+`a2a.types.UnsupportedOperationError` since no `Task` ever existed to target.
 
-Because no `Task` is ever created, `DecisaoAgentExecutor.cancel()` always raises
-`a2a.types.UnsupportedOperationError` - the framework's own routes translate this into a proper
-JSON-RPC error - since there is never an in-flight task for a cancellation request to target.
+**Superseded by `docs/adr/0015-decisao-agent-migrates-to-task-taskupdater.md`**: once
+`docs/adr/0014-decisao-agent-drafts-an-optional-llm-opinion-narrative.md` added a genuine,
+non-trivial latency phase (two network round-trips), the executor migrated to `Task`/`TaskUpdater`
+as this section already anticipated below.
 
 ### Two composition roots, not one selectable transport
 
@@ -83,5 +82,5 @@ transitive dependencies. `uvicorn` was already a transitive dependency of `mcp` 
 `decisao-agent` already depended on), so no new server runtime was introduced.
 
 No orchestrator exists yet to discover or call this Agent Card. The LLM-drafted parecer
-(`opinion_drafting`, `json_repair` workloads) remains a separate, future milestone, at which point
-the `Task`/`TaskUpdater` pattern this ADR deliberately avoided will likely become necessary.
+(`opinion_drafting` workload) shipped in ADR-0014; `json_repair` remains a separate, future
+milestone.

@@ -115,6 +115,6 @@ request, because no real provider key is configured - this is expected, not a de
 resolve automatically once real credentials and the compose stack are both present, with zero
 code changes.
 
-The next natural milestone is migrating `DecisaoAgentExecutor` from the immediate-`Message`
-pattern to `Task`/`TaskUpdater` (already anticipated by ADR-0013), now that narrative drafting
-introduces a real, non-trivial latency phase worth reporting as `TASK_STATE_WORKING`.
+`DecisaoAgentExecutor` has since migrated from the immediate-`Message` pattern to
+`Task`/`TaskUpdater` (`docs/adr/0015-decisao-agent-migrates-to-task-taskupdater.md`), reporting
+`TASK_STATE_WORKING` during the latency this milestone introduced.

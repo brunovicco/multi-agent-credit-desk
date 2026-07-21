@@ -61,6 +61,12 @@ always `None` in practice today, even though real routing against a running
 `policy-model-router` container has been verified to succeed - this resolves automatically once
 real credentials are configured, no code change required. See `services/decisao-agent/README.md`.
 
+`DecisaoAgentExecutor` now uses the A2A `Task`/`TaskUpdater` execution pattern instead of the
+immediate-`Message` pattern ADR-0013 originally chose: narrative drafting added a genuine,
+non-trivial latency phase (two network round-trips) worth reporting as `TASK_STATE_WORKING`, and a
+real `Task` makes `tasks/get`/`tasks/cancel` requests against this agent actually work - see
+`docs/adr/0015-decisao-agent-migrates-to-task-taskupdater.md`.
+
 `a2a-otel-kit==0.4.2` (https://github.com/brunovicco/a2a-otel-kit) is pinned as a root workspace
 dependency per ADR-0003. It still has no consumer: `decisao-agent`'s new A2A surface uses
 `a2a-sdk` directly and does not yet wire `a2a-otel-kit`'s `Observability` around it - so today the
@@ -85,7 +91,7 @@ multi-agent-credit-desk/
 │   ├── policy-mcp/      # import: policy_mcp - read-only MCP server, credit_core policy catalog
 │   ├── bureau-mcp/      # import: bureau_mcp - read-only MCP server, synthetic bureau report catalog
 │   └── decisao-agent/   # import: decisao_agent - credit_core evaluation + policy-mcp cross-check, CLI + A2A server
-├── docs/adr/            # canonical architecture decisions (0001, 0002-0014)
+├── docs/adr/            # canonical architecture decisions (0001, 0002-0015)
 └── pyproject.toml       # virtual workspace coordinator (tool.uv.package = false); no application code
 ```
 
